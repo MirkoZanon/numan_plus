@@ -3,12 +3,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "numan_plus"
-version = "0.0.9"
+name = "easy_SVM"
+version = "0.0.1"
 authors = [
   { name="Mirko Zanon", email="mirkozanon91@gmail.com" },
 ]
-description = "A package for additional functionalities in numan (https://github.com/LemonJust/numan)"
+description = "A package for userfriendly implementation of SVM"
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
@@ -18,5 +18,5 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/MirkoZanon/numan_plus"
-"Bug Tracker" = "https://github.com/MirkoZanon/numan_plus/issues"
+"Homepage" = "https://github.com/MirkoZanon/easy_SVM"
+"Bug Tracker" = "https://github.com/MirkoZanon/easy_SVM/issues"
