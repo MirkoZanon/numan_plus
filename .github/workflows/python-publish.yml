@@ -40,11 +40,14 @@ jobs:
           TWINE_USERNAME: __token__  # Use __token__ for authentication
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}  # Use the PyPI API token stored as a secret
         run: |
+          # Define the base name of your package
+          PACKAGE_NAME="numan_plus"
+
           # Find the latest distribution files
-          latest_files=$(ls -t dist | grep -E '^numan_plus-[0-9]+.[0-9]+.[0-9]+.*\.(tar\.gz|whl)$')
-          
-          # Upload each latest file individually
-          for file in $latest_files; do
-            echo "Uploading $file"
-            twine upload "dist/$file"
+          LATEST_FILES=$(ls -t dist | grep -E "^${PACKAGE_NAME}-[0-9]+.[0-9]+.[0-9]+.*\.(tar\.gz|whl)$")
+
+          # Upload the latest files individually
+          for FILE in $LATEST_FILES; do
+            echo "Uploading $FILE"
+            twine upload "dist/$FILE"
           done
