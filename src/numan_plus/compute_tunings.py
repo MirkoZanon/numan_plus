@@ -17,14 +17,14 @@ def preferred_numerosity(Q, H):
     
     return pref_num
 
-def get_tuning_matrix(Q, R, pref_num, numerosities_list):
+def get_tuning_matrix(Q, R, pref_num, n_numerosities):
     # 1.Calculate average tuning curve of each unit
     tuning_curves = average_tuning_curves(Q, R)
 
     # 2.Calculate population tuning curves for each preferred numerosity
-    tuning_mat = np.array([np.mean(tuning_curves[:,pref_num==q], axis=1) for q in np.array(numerosities_list)]) # one row for each pref numerosity
+    tuning_mat = np.array([np.mean(tuning_curves[:,pref_num==q], axis=1) for q in np.arange(n_numerosities)]) # one row for each pref numerosity
     tuning_err = np.array([np.std(tuning_curves[:,pref_num==q], axis=1) / np.sqrt(np.sum(pref_num==q)) # standard error for each point on each tuning curve
-                            for q in np.array(numerosities_list)])
+                            for q in np.arange(n_numerosities)])
 
     # 3.Normalize population tuning curves to the 0-1 range
     tmmin = tuning_mat.min(axis=1)[:,None]
@@ -34,21 +34,21 @@ def get_tuning_matrix(Q, R, pref_num, numerosities_list):
 
     return tuning_mat, tuning_err
 
-def plot_tunings(tuning_mat, tuning_err, numerosities_list, colors_list, save_path=None, save_name=None):
+def plot_tunings(tuning_mat, tuning_err, n_numerosities, colors_list, save_path=None, save_name=None):
     # Plot population tuning curves on linear scale
-    Qrange = np.array(numerosities_list)
+    Qrange = np.arange(n_numerosities)
     plt.figure(figsize=(9,4))
     plt.title(save_name)
     plt.subplot(1,2,1)
     for i, (tc, err) in enumerate(zip(tuning_mat, tuning_err)):
         plt.errorbar(Qrange, tc, err, color=colors_list[i])
-        plt.xticks(ticks=Qrange, labels=np.array(numerosities_list))
+        plt.xticks(ticks=Qrange, labels=np.arange(n_numerosities))
     plt.xlabel('Numerosity')
     plt.ylabel('Normalized Neural Activity')
     # Plot population tuning curves on log scale
     plt.subplot(1,2,2)
     for i, (tc, err) in enumerate(zip(tuning_mat, tuning_err)):
-        plt.errorbar(np.array(numerosities_list), tc, err, color=colors_list[i]) # offset x axis by one to avoid taking the log of zero
+        plt.errorbar(np.arange(n_numerosities), tc, err, color=colors_list[i]) # offset x axis by one to avoid taking the log of zero
     plt.xscale('log', base=2)
     #plt.gca().xaxis.set_major_formatter(ScalarFormatter())
     plt.xticks(ticks=Qrange, labels=Qrange)
@@ -64,8 +64,8 @@ def plot_tunings(tuning_mat, tuning_err, numerosities_list, colors_list, save_pa
             plt.savefig(save_name + '.png', dpi=900)
     plt.show()
 
-def plot_selective_cells_histo(Q, R, pref_num, numerosities_list, colors_list, chance_lev=None, save_path = None, save_name=None):
-    Qrange = np.array(numerosities_list)
+def plot_selective_cells_histo(Q, R, pref_num, n_numerosities, colors_list, chance_lev=None, save_path = None, save_name=None):
+    Qrange = np.arange(n_numerosities)
     hist = [np.sum(pref_num==q) for q in Qrange]
     perc  = hist/np.sum(hist)
 
@@ -76,7 +76,7 @@ def plot_selective_cells_histo(Q, R, pref_num, numerosities_list, colors_list, c
         plt.text(x, y, str(y)+'\n'+str(round(p*100,1))+'%')
     if not (chance_lev is None):
         plt.axhline(y=chance_lev, color='k', linestyle='--')
-    plt.xticks(np.array(numerosities_list),numerosities_list)
+    plt.xticks(np.arange(n_numerosities),np.arange(n_numerosities).tolist())
     plt.xlabel('Preferred Numerosity')
     plt.ylabel('Number of cells')
     plt.title(save_name)
@@ -90,16 +90,16 @@ def plot_selective_cells_histo(Q, R, pref_num, numerosities_list, colors_list, c
             plt.savefig(save_name + '.png', dpi=900)
     plt.show()
 
-def abs_dist_tunings(tuning_mat, numerosities_list, absolute_dist=0, save_path = None, save_name=None):
+def abs_dist_tunings(tuning_mat, n_numerosities, absolute_dist=0, save_path = None, save_name=None):
     if absolute_dist == 1:
-        distRange = numerosities_list
+        distRange = np.arange(n_numerosities).tolist()
     else:
-        distRange = [-5,-4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
+        distRange = np.arange(-(n_numerosities-1),n_numerosities).tolist()
     dist_tuning_dict = {}
     for i in distRange:
         dist_tuning_dict[str(i)]=[]
-    for pref_n in np.array(numerosities_list):
-        for n in np.array(numerosities_list):
+    for pref_n in np.arange(n_numerosities):
+        for n in np.arange(n_numerosities):
             if absolute_dist == 1:
                 dist_tuning_dict[str(abs(n - pref_n))].append(tuning_mat[pref_n][n])
             else:
