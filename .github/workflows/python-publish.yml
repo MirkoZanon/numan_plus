@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v3
 
       # Step 2: Set up Python environment
-      - name: Set up Python
+        - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'  # Specify the Python version
@@ -34,19 +34,31 @@ jobs:
       - name: List files for debugging
         run: ls -l dist  # List the contents of the dist directory
 
-      # Step 6: Find and upload the latest distribution files
+      # Step 6: Extract version from the tag and upload the matching files
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__  # Use __token__ for authentication
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}  # Use the PyPI API token stored as a secret
         run: |
+          # Extract the version from the tag
+          TAG_NAME=$(echo "${GITHUB_REF#refs/tags/}")  # Get the tag name without "refs/tags/"
+          VERSION="${TAG_NAME#v}"  # Remove the 'v' prefix
+
+          echo "Version extracted from tag: $VERSION"
+
           # Define the base name of your package
           PACKAGE_NAME="numan_plus"
 
-          # Find the latest distribution files
-          LATEST_FILES=$(ls -t dist | grep -E "^${PACKAGE_NAME}-[0-9]+.[0-9]+.[0-9]+.*\.(tar\.gz|whl)$")
+          # Find the distribution files that match the extracted version
+          LATEST_FILES=$(ls dist | grep -E "^${PACKAGE_NAME}-${VERSION}.*\.(tar\.gz|whl)$")
 
-          # Upload the latest files individually
+          # Check if files were found
+          if [ -z "$LATEST_FILES" ]; then
+            echo "No distribution files found for version $VERSION"
+            exit 1
+          fi
+
+          # Upload the matching files
           for FILE in $LATEST_FILES; do
             echo "Uploading $FILE"
             twine upload "dist/$FILE"
