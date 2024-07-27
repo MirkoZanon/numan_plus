@@ -26,13 +26,28 @@ jobs:
           python -m pip install --upgrade pip  # Upgrade pip
           pip install build twine  # Install build and twine
 
-      # Step 4: Build the package
-      - name: Build the package
-        run: python -m build  # Build source and wheel distributions
+      # Step 4: Update the version in pyproject.toml
+      - name: Update version in pyproject.toml
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"  # Extract tag name
+          VERSION="${TAG_NAME#v}"  # Remove 'v' prefix to get version number
 
-      # Step 5: List files in the dist directory for debugging
-      - name: List files for debugging
-        run: ls -l dist  # List the contents of the dist directory
+          echo "Updating version in pyproject.toml to $VERSION"
+
+          # Use sed to update the version in pyproject.toml
+          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+          # Verify the change
+          grep "^version = " pyproject.toml
+
+      # Step 5: Build the package
+      - name: Build the package
+        run: |
+          python -m build  # Build source and wheel distributions
+
+          # List the contents of the dist directory after build
+          echo "Contents of dist directory after build:"
+          ls -l dist
 
       # Step 6: Extract version from the tag and upload the matching files
       - name: Publish to PyPI
@@ -49,8 +64,14 @@ jobs:
           # Define the base name of your package
           PACKAGE_NAME="numan_plus"
 
+          # Print the list of files in dist directory for debugging
+          echo "Files in dist directory before uploading:"
+          ls dist
+
           # Find the distribution files that match the extracted version
           LATEST_FILES=$(ls dist | grep -E "^${PACKAGE_NAME}-${VERSION}.*\.(tar\.gz|whl)$")
+
+          echo "Files matched for version $VERSION: $LATEST_FILES"
 
           # Check if files were found
           if [ -z "$LATEST_FILES" ]; then
