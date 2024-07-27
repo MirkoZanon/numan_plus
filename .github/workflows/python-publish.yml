@@ -1,36 +1,43 @@
 name: Upload Python Package
 
+# Trigger the workflow on push to any tag that starts with "v"
 on:
   push:
     tags:
-      - 'v*'  # Questo attiva il workflow solo sui push dei tag che iniziano con "v"
+      - 'v*'
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Use the latest Ubuntu environment
 
     steps:
+      # Step 1: Check out the repository code
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
+      # Step 2: Set up Python environment
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.x'  # Specify the Python version
 
+      # Step 3: Install dependencies for building and uploading the package
       - name: Install build dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install build twine
+          python -m pip install --upgrade pip  # Upgrade pip
+          pip install build twine  # Install build and twine
 
+      # Step 4: Build the package
       - name: Build the package
-        run: python -m build
+        run: python -m build  # Build source and wheel distributions
 
+      # Step 5: List files in the dist directory for debugging
       - name: List files for debugging
-        run: ls -l dist
+        run: ls -l dist  # List the contents of the dist directory
 
+      # Step 6: Publish the package to PyPI
       - name: Publish to PyPI
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+          TWINE_USERNAME: __token__  # Use __token__ for authentication
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}  # Use the PyPI API token stored as a secret
+        run: twine upload dist/*  # Upload the built distributions to PyPI
