@@ -339,6 +339,8 @@ class Reports:
                             labels=None,
                             plot_type="cycle",
                             plot_type_tag='',
+                            t_points_before_stim = 3,
+                            t_points_after_stim = 4,
                             forward_shift=0,
                             plot_individual=False,
                             groups_to_specify=("sig2v3", "sig2v5", "sig3v5", "sig2vB", "sig3vB", "sig5vB"),
@@ -477,7 +479,7 @@ class Reports:
                                           plot_individual=plot_individual, split=False)
 
             if plot_type == "psh_b":
-                padding = [-3, -2, -1, 0, 1, 2, 3, 4, 5]
+                padding = list(range(-t_points_before_stim, t_points_after_stim + 1))
                 # titles for the current batch
                 titles = [f"Cell {idx}, {group} XYZ : {zyx[2]},{zyx[1]},{zyx[0]} (voxel) "
                           for idx, group, zyx in zip(cells_idx[btch], cells_group[btch], cells_zyx[btch])]
