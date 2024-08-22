@@ -346,7 +346,8 @@ class Reports:
                             groups_to_specify=("sig2v3", "sig2v5", "sig3v5", "sig2vB", "sig3vB", "sig5vB"),
                             tmp_folder=None,
                             pdf_filename=None,
-                            checkbox=False):
+                            checkbox=False,
+                            saving_folder=''):
         """
         Generates a pdf with the specified type of plots.
 
@@ -399,19 +400,19 @@ class Reports:
         if tmp_folder is None:
             if checkbox:
                 # where to temporary store images while the code is running
-                tmp_folder = f"{self.project}/spots/reports/groupped/signals/"
+                tmp_folder = f"{self.project}/spots/reports/"
             else:
                 # where to temporary store images while the code is running
-                tmp_folder = f"{self.project}/spots/reports/all_significant/signals/"
+                tmp_folder = f"{self.project}/spots/reports/"
 
         if pdf_filename is None:
             if checkbox:
                 # filename to save pdf with all the significant traces and checkboxes
-                pdf_filename = f"{self.project}/spots/reports/groupped/signals/" \
+                pdf_filename = f"{self.project}/spots/reports/{saving_folder}/" \
                                f"CHOOSE_{plot_type}{plot_type_tag}_from_{spot_tag}_group_{group_tag}_{region}.pdf"
             else:
                 # filename to save pdf with all the significant traces
-                pdf_filename = f"{self.project}/spots/reports/all_significant/signals/" \
+                pdf_filename = f"{self.project}/spots/reports/{saving_folder}/" \
                                f"{plot_type}{plot_type_tag}_from_{spot_tag}_group_{group_tag}_{region}.pdf"
 
         spots = analysis.Spots.from_json(f"{self.project}/spots/signals/spots_{spot_tag}.json")
