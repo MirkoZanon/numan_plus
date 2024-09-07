@@ -339,3 +339,17 @@ def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, s
         print_t_test_table(dist_tuning_dict_abs_0_exc, dist_tuning_dict_abs_1_exc, "Excitatory Neuron Comparisons")
         if tuning_mat_inh is not None:
             print_t_test_table(dist_tuning_dict_abs_0_inh, dist_tuning_dict_abs_1_inh, "Inhibitory Neuron Comparisons")
+    
+    # Return data necessary for reconstructing the curves
+    return {
+        'exc_avg_tuning_abs_0': dist_avg_tuning_abs_0_exc,
+        'exc_err_tuning_abs_0': dist_err_tuning_abs_0_exc,
+        'exc_avg_tuning_abs_1': dist_avg_tuning_abs_1_exc,
+        'exc_err_tuning_abs_1': dist_err_tuning_abs_1_exc,
+        'inh_avg_tuning_abs_0': dist_avg_tuning_abs_0_inh,
+        'inh_err_tuning_abs_0': dist_err_tuning_abs_0_inh,
+        'inh_avg_tuning_abs_1': dist_avg_tuning_abs_1_inh,
+        'inh_err_tuning_abs_1': dist_err_tuning_abs_1_inh,
+        'distRange_abs_0': distRange_abs_0,
+        'distRange_abs_1': distRange_abs_1
+    }
