@@ -74,43 +74,6 @@ def get_tuning_matrix(Q, R, pref_num, excitatory_or_inhibitory, n_numerosities):
 
     return tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh
 
-def plot_tunings(tuning_mat, tuning_err, n_numerosities, colors_list, save_path=None, save_name=None):
-    Qrange = np.arange(n_numerosities)
-
-    # To handle log(0) issues, replace 0 with a small value
-    log_safe_Qrange = np.where(Qrange == 0, 1e-5, Qrange)
-
-    plt.figure(figsize=(9,4))
-    plt.suptitle(save_name)
-
-    # Linear scale plot
-    plt.subplot(1,2,1)
-    for i, (tc, err) in enumerate(zip(tuning_mat, tuning_err)):
-        plt.errorbar(Qrange, tc, err, color=colors_list[i])
-    plt.xticks(ticks=Qrange, labels=np.arange(n_numerosities))
-    plt.xlabel('Numerosity')
-    plt.ylabel('Normalized Neural Activity')
-
-    # Log scale plot
-    plt.subplot(1,2,2)
-    for i, (tc, err) in enumerate(zip(tuning_mat, tuning_err)):
-        plt.errorbar(log_safe_Qrange, tc, err, color=colors_list[i])  # Use log_safe_Qrange to avoid log(0)
-    plt.xscale('log', base=2)
-    plt.xticks(ticks=log_safe_Qrange, labels=np.arange(n_numerosities))
-    plt.xlabel('Numerosity')
-    plt.ylabel('Normalized Neural Activity')
-
-    # Save figure
-    if save_name:
-        if save_path:
-            plt.savefig(f'{save_path}/{save_name}.svg')
-            plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
-        else:
-            plt.savefig(f'{save_name}.svg')
-            plt.savefig(f'{save_name}.png', dpi=900)
-
-    plt.show()
-
 def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_lev=None, save_path=None, save_name=None):
     Qrange = np.arange(n_numerosities)
     
@@ -204,53 +167,90 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
 
         plt.show()
 
-def abs_dist_tunings(tuning_mat, n_numerosities, absolute_dist=0, save_path = None, save_name=None):
-    if absolute_dist == 1:
-        distRange = np.arange(n_numerosities).tolist()
-    else:
-        distRange = np.arange(-(n_numerosities-1),n_numerosities).tolist()
-    dist_tuning_dict = {}
-    for i in distRange:
-        dist_tuning_dict[str(i)]=[]
+def plot_tunings_and_abs_dist(tuning_mat_exc=None, tuning_err_exc=None, 
+                              tuning_mat_inh=None, tuning_err_inh=None,
+                              n_numerosities=0, colors_list=None,
+                              excitatory_or_inhibitory=None, log_scale=False,
+                              save_path=None, save_name=None):
+    """
+    Plots tuning curves and absolute distance tunings for excitatory and inhibitory neurons.
+    
+    Parameters:
+        tuning_mat_exc, tuning_err_exc: Tuning matrices and errors for excitatory neurons.
+        tuning_mat_inh, tuning_err_inh: Tuning matrices and errors for inhibitory neurons.
+        n_numerosities: Number of numerosities.
+        colors_list: List of colors for plotting.
+        excitatory_or_inhibitory: Optional array to differentiate excitatory and inhibitory neurons.
+        log_scale: If True, also plots log scale.
+        save_path: Path to save the plots.
+        save_name: Name for saving the plot.
+    """
+    Qrange = np.arange(n_numerosities)
+    
+    # Handle log(0) issues by replacing 0 with a small value
+    log_safe_Qrange = np.where(Qrange == 0, 1e-5, Qrange)
+
+    fig, axs = plt.subplots(2, 2 if log_scale else 1, figsize=(12, 8))
+    fig.suptitle(save_name)
+
+    # Plot for excitatory neurons
+    if tuning_mat_exc is not None and tuning_err_exc is not None:
+        axs[0, 0].set_title('Excitatory Neurons - Linear Scale')
+        for i, (tc, err) in enumerate(zip(tuning_mat_exc, tuning_err_exc)):
+            axs[0, 0].errorbar(Qrange, tc, err, color=colors_list[i])
+        axs[0, 0].set_xlabel('Numerosity')
+        axs[0, 0].set_ylabel('Normalized Neural Activity')
+
+        if log_scale:
+            axs[0, 1].set_title('Excitatory Neurons - Log Scale')
+            for i, (tc, err) in enumerate(zip(tuning_mat_exc, tuning_err_exc)):
+                axs[0, 1].errorbar(log_safe_Qrange, tc, err, color=colors_list[i])
+            axs[0, 1].set_xscale('log', base=2)
+            axs[0, 1].set_xlabel('Numerosity')
+            axs[0, 1].set_ylabel('Normalized Neural Activity')
+
+    # Plot for inhibitory neurons
+    if tuning_mat_inh is not None and tuning_err_inh is not None:
+        axs[1, 0].set_title('Inhibitory Neurons - Linear Scale')
+        for i, (tc, err) in enumerate(zip(tuning_mat_inh, tuning_err_inh)):
+            axs[1, 0].errorbar(Qrange, tc, err, color=colors_list[i])
+        axs[1, 0].set_xlabel('Numerosity')
+        axs[1, 0].set_ylabel('Normalized Neural Activity')
+
+        if log_scale:
+            axs[1, 1].set_title('Inhibitory Neurons - Log Scale')
+            for i, (tc, err) in enumerate(zip(tuning_mat_inh, tuning_err_inh)):
+                axs[1, 1].errorbar(log_safe_Qrange, tc, err, color=colors_list[i])
+            axs[1, 1].set_xscale('log', base=2)
+            axs[1, 1].set_xlabel('Numerosity')
+            axs[1, 1].set_ylabel('Normalized Neural Activity')
+
+    # Plot absolute distance tunings
+    dist_avg_tuning_exc, dist_err_tuning_exc = abs_dist_tunings(tuning_mat_exc, n_numerosities)
+    dist_avg_tuning_inh, dist_err_tuning_inh = abs_dist_tunings(tuning_mat_inh, n_numerosities)
+
+    plt.tight_layout()
+    if save_name:
+        if save_path:
+            plt.savefig(f'{save_path}/{save_name}.svg')
+            plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
+        else:
+            plt.savefig(f'{save_name}.svg')
+            plt.savefig(f'{save_name}.png', dpi=900)
+
+    plt.show()
+
+# Additional function to calculate absolute distance tunings
+def abs_dist_tunings(tuning_mat, n_numerosities):
+    distRange = np.arange(-(n_numerosities - 1), n_numerosities).tolist()
+    dist_tuning_dict = {str(i): [] for i in distRange}
+    
     for pref_n in np.arange(n_numerosities):
         for n in np.arange(n_numerosities):
-            if absolute_dist == 1:
-                dist_tuning_dict[str(abs(n - pref_n))].append(tuning_mat[pref_n][n])
-            else:
-                dist_tuning_dict[str(n - pref_n)].append(tuning_mat[pref_n][n])
-            
-    dist_avg_tuning = [mean(dist_tuning_dict[key]) for key in dist_tuning_dict.keys()]
-    dist_err_tuning = []
-    for key in dist_tuning_dict.keys():
-        if len(dist_tuning_dict[key])>1:
-            dist_err_tuning.append(np.nanstd(dist_tuning_dict[key])/sqrt(len(dist_tuning_dict[key])))
-        else:
-            dist_err_tuning.append(0)
+            dist_tuning_dict[str(n - pref_n)].append(tuning_mat[pref_n][n])
 
-    #plot
-    plt.figure(figsize=(4,4))
-    if not np.isnan(dist_avg_tuning).all():
-        plt.errorbar(distRange, dist_avg_tuning, dist_err_tuning, color='black')
-    plt.xticks(distRange)
-    plt.xlabel('Absolute numerical distance')
-    plt.ylabel('Normalized Neural Activity')
-    plt.title(save_name)
-    # save figure
-    if not (save_name is None):
-        if not (save_path is None):
-            plt.savefig(save_path + '/'+ save_name + '.svg')
-            plt.savefig(save_path + '/'+ save_name + '.png', dpi=900)
-        else:
-            plt.savefig(save_name + '.svg')
-            plt.savefig(save_name + '.png', dpi=900)
-            
-    plt.show()
-    
-    #statistics t-test comparisons
-    for i in distRange:
-        if i==5:
-            continue
-        print('Comaparison absolute distances '+ str(i)+ ' and '+ str(i+1)+ ':')
-        print(stats.ttest_ind(a=dist_tuning_dict[str(i)], b=dist_tuning_dict[str(i+1)], equal_var=False))
-    
+    dist_avg_tuning = [np.mean(dist_tuning_dict[key]) for key in dist_tuning_dict.keys()]
+    dist_err_tuning = [np.std(dist_tuning_dict[key]) / np.sqrt(len(dist_tuning_dict[key]))
+                       if len(dist_tuning_dict[key]) > 1 else 0 for key in dist_tuning_dict.keys()]
+
     return dist_avg_tuning, dist_err_tuning
