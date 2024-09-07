@@ -75,33 +75,40 @@ def get_tuning_matrix(Q, R, pref_num, excitatory_or_inhibitory, n_numerosities):
     return tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh
 
 def plot_tunings(tuning_mat, tuning_err, n_numerosities, colors_list, save_path=None, save_name=None):
-    # Plot population tuning curves on linear scale
     Qrange = np.arange(n_numerosities)
+
+    # To handle log(0) issues, replace 0 with a small value
+    log_safe_Qrange = np.where(Qrange == 0, 1e-5, Qrange)
+
     plt.figure(figsize=(9,4))
-    plt.title(save_name)
+    plt.suptitle(save_name)
+
+    # Linear scale plot
     plt.subplot(1,2,1)
     for i, (tc, err) in enumerate(zip(tuning_mat, tuning_err)):
         plt.errorbar(Qrange, tc, err, color=colors_list[i])
-        plt.xticks(ticks=Qrange, labels=np.arange(n_numerosities))
+    plt.xticks(ticks=Qrange, labels=np.arange(n_numerosities))
     plt.xlabel('Numerosity')
     plt.ylabel('Normalized Neural Activity')
-    # Plot population tuning curves on log scale
+
+    # Log scale plot
     plt.subplot(1,2,2)
     for i, (tc, err) in enumerate(zip(tuning_mat, tuning_err)):
-        plt.errorbar(np.arange(n_numerosities), tc, err, color=colors_list[i]) # offset x axis by one to avoid taking the log of zero
+        plt.errorbar(log_safe_Qrange, tc, err, color=colors_list[i])  # Use log_safe_Qrange to avoid log(0)
     plt.xscale('log', base=2)
-    #plt.gca().xaxis.set_major_formatter(ScalarFormatter())
-    plt.xticks(ticks=Qrange, labels=Qrange)
+    plt.xticks(ticks=log_safe_Qrange, labels=np.arange(n_numerosities))
     plt.xlabel('Numerosity')
     plt.ylabel('Normalized Neural Activity')
-    # save figure
-    if not (save_name is None):
-        if not (save_path is None):
-            plt.savefig(save_path + '/'+ save_name + '.svg')
-            plt.savefig(save_path + '/'+ save_name + '.png', dpi=900)
+
+    # Save figure
+    if save_name:
+        if save_path:
+            plt.savefig(f'{save_path}/{save_name}.svg')
+            plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
         else:
-            plt.savefig(save_name + '.svg')
-            plt.savefig(save_name + '.png', dpi=900)
+            plt.savefig(f'{save_name}.svg')
+            plt.savefig(f'{save_name}.png', dpi=900)
+
     plt.show()
 
 def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_lev=None, save_path=None, save_name=None):
