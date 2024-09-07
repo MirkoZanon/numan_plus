@@ -5,34 +5,74 @@ from statistics import mean, stdev, sqrt
 import scipy.stats as stats
 
 def average_tuning_curves(Q, H):
-    Qrange = np.unique(Q)
-    tuning_curves = np.array([H[Q==j,:].mean(axis=0) for j in Qrange])
+    #Q: array of type of stimulus (trials,)
+    #H: matrix of responses (trials, cells)
+    Qrange = np.unique(Q) #Qrange: array of unique type of stimuli (n_numerosities,)
+    tuning_curves = np.array([H[Q==j,:].mean(axis=0) for j in Qrange]) # (n_num, cells)
     
     return tuning_curves
 
 def preferred_numerosity(Q, H):
     tuning_curves = average_tuning_curves(Q, H)
 
-    pref_num = np.unique(Q)[np.argmax(tuning_curves, axis=0)]
+    #pref_num = np.unique(Q)[np.argmax(tuning_curves, axis=0)]
+    # added abs to consider possible inhibitions!!!!
+    pref_num = np.unique(Q)[np.argmax(np.abs(tuning_curves), axis=0)]
+
+    # Find if activity is excitatory (positive) or inhibitory (negative)
+    max_values = tuning_curves[np.argmax(np.abs(tuning_curves), axis=0), np.arange(tuning_curves.shape[1])]
+    excitatory_or_inhibitory = np.where(max_values > 0, 'excitatory', 'inhibitory')
     
-    return pref_num
+    return pref_num, excitatory_or_inhibitory
 
-def get_tuning_matrix(Q, R, pref_num, n_numerosities):
-    # 1.Calculate average tuning curve of each unit
+def get_tuning_matrix(Q, R, pref_num, excitatory_or_inhibitory, n_numerosities):
+    # 1. Calculate average tuning curve of each unit
     tuning_curves = average_tuning_curves(Q, R)
+    
+    # Arrays to store results for excitatory and inhibitory neurons
+    tuning_mat_exc = []
+    tuning_mat_inh = []
+    tuning_err_exc = []
+    tuning_err_inh = []
 
-    # 2.Calculate population tuning curves for each preferred numerosity
-    tuning_mat = np.array([np.mean(tuning_curves[:,pref_num==q], axis=1) for q in np.arange(n_numerosities)]) # one row for each pref numerosity
-    tuning_err = np.array([np.std(tuning_curves[:,pref_num==q], axis=1) / np.sqrt(np.sum(pref_num==q)) # standard error for each point on each tuning curve
-                            for q in np.arange(n_numerosities)])
+    # 2. Calculate population tuning curves separately for excitatory and inhibitory neurons
+    for q in np.arange(n_numerosities):
+        # For excitatory neurons
+        exc_indices = np.logical_and(pref_num == q, excitatory_or_inhibitory == 'excitatory')
+        if np.any(exc_indices):
+            tuning_mat_exc.append(np.mean(tuning_curves[:, exc_indices], axis=1))
+            tuning_err_exc.append(np.std(tuning_curves[:, exc_indices], axis=1) / np.sqrt(np.sum(exc_indices)))
+        else:
+            tuning_mat_exc.append(np.zeros(tuning_curves.shape[0]))  # Append zeros if no excitatory neurons found
+            tuning_err_exc.append(np.zeros(tuning_curves.shape[0]))
 
-    # 3.Normalize population tuning curves to the 0-1 range
-    tmmin = tuning_mat.min(axis=1)[:,None]
-    tmmax = tuning_mat.max(axis=1)[:,None]
-    tuning_mat = (tuning_mat-tmmin) / (tmmax-tmmin)
-    tuning_err = tuning_err / (tmmax-tmmin) # scale standard error to be consistent with above normalization
+        # For inhibitory neurons
+        inh_indices = np.logical_and(pref_num == q, excitatory_or_inhibitory == 'inhibitory')
+        if np.any(inh_indices):
+            tuning_mat_inh.append(np.mean(tuning_curves[:, inh_indices], axis=1))
+            tuning_err_inh.append(np.std(tuning_curves[:, inh_indices], axis=1) / np.sqrt(np.sum(inh_indices)))
+        else:
+            tuning_mat_inh.append(np.zeros(tuning_curves.shape[0]))  # Append zeros if no inhibitory neurons found
+            tuning_err_inh.append(np.zeros(tuning_curves.shape[0]))
 
-    return tuning_mat, tuning_err
+    # Convert lists to numpy arrays
+    tuning_mat_exc = np.array(tuning_mat_exc)
+    tuning_err_exc = np.array(tuning_err_exc)
+    tuning_mat_inh = np.array(tuning_mat_inh)
+    tuning_err_inh = np.array(tuning_err_inh)
+
+    # 3. Normalize population tuning curves to the 0-1 range for both excitatory and inhibitory neurons
+    def normalize_tuning(tuning_mat, tuning_err):
+        tmmin = tuning_mat.min(axis=1)[:, None]
+        tmmax = tuning_mat.max(axis=1)[:, None]
+        tuning_mat_norm = (tuning_mat - tmmin) / (tmmax - tmmin)
+        tuning_err_norm = tuning_err / (tmmax - tmmin)
+        return tuning_mat_norm, tuning_err_norm
+
+    tuning_mat_exc, tuning_err_exc = normalize_tuning(tuning_mat_exc, tuning_err_exc)
+    tuning_mat_inh, tuning_err_inh = normalize_tuning(tuning_mat_inh, tuning_err_inh)
+
+    return tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh
 
 def plot_tunings(tuning_mat, tuning_err, n_numerosities, colors_list, save_path=None, save_name=None):
     # Plot population tuning curves on linear scale
@@ -64,7 +104,7 @@ def plot_tunings(tuning_mat, tuning_err, n_numerosities, colors_list, save_path=
             plt.savefig(save_name + '.png', dpi=900)
     plt.show()
 
-def plot_selective_cells_histo(Q, R, pref_num, n_numerosities, colors_list, chance_lev=None, save_path = None, save_name=None):
+def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, chance_lev=None, save_path = None, save_name=None):
     Qrange = np.arange(n_numerosities)
     hist = [np.sum(pref_num==q) for q in Qrange]
     perc  = hist/np.sum(hist)
