@@ -104,31 +104,98 @@ def plot_tunings(tuning_mat, tuning_err, n_numerosities, colors_list, save_path=
             plt.savefig(save_name + '.png', dpi=900)
     plt.show()
 
-def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, chance_lev=None, save_path = None, save_name=None):
+def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_lev=None, save_path=None, save_name=None):
     Qrange = np.arange(n_numerosities)
-    hist = [np.sum(pref_num==q) for q in Qrange]
-    perc  = hist/np.sum(hist)
+    
+    if excitatory_or_inhibitory is None:
+        # Caso originale: plottare l'istogramma di tutti i neuroni
+        hist = [np.sum(pref_num == q) for q in Qrange]
+        perc = hist / np.sum(hist)
 
-    # plot number neurons percentages and absolute distance tuning
-    plt.figure(figsize=(4,4))
-    plt.bar(Qrange, hist, width=0.8, color=colors_list)
-    for x, y, p in zip(Qrange, hist, perc):
-        plt.text(x, y, str(y)+'\n'+str(round(p*100,1))+'%')
-    if not (chance_lev is None):
-        plt.axhline(y=chance_lev, color='k', linestyle='--')
-    plt.xticks(np.arange(n_numerosities),np.arange(n_numerosities).tolist())
-    plt.xlabel('Preferred Numerosity')
-    plt.ylabel('Number of cells')
-    plt.title(save_name)
-    # save figure
-    if not (save_name is None):
-        if not (save_path is None):
-            plt.savefig(save_path + '/'+ save_name + '.svg')
-            plt.savefig(save_path + '/'+ save_name + '.png', dpi=900)
-        else:
-            plt.savefig(save_name + '.svg')
-            plt.savefig(save_name + '.png', dpi=900)
-    plt.show()
+        plt.figure(figsize=(4, 4))
+        plt.bar(Qrange, hist, width=0.8, color=colors_list)
+        for x, y, p in zip(Qrange, hist, perc):
+            plt.text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
+
+        if not (chance_lev is None):
+            plt.axhline(y=chance_lev, color='k', linestyle='--')
+
+        plt.xticks(np.arange(n_numerosities), np.arange(n_numerosities).tolist())
+        plt.xlabel('Preferred Numerosity')
+        plt.ylabel('Number of cells')
+        plt.title(save_name)
+
+        # Save figure
+        if not (save_name is None):
+            if not (save_path is None):
+                plt.savefig(f'{save_path}/{save_name}.svg')
+                plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
+            else:
+                plt.savefig(f'{save_name}.svg')
+                plt.savefig(f'{save_name}.png', dpi=900)
+
+        plt.show()
+
+    else:
+        # Se excitatory_or_inhibitory è fornito, plotta i tre subplots
+        fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+
+        # Istogramma per i neuroni excitatory
+        excitatory_indices = excitatory_or_inhibitory == 'excitatory'
+        hist_exc = [np.sum(pref_num[excitatory_indices] == q) for q in Qrange]
+        perc_exc = hist_exc / np.sum(hist_exc)
+
+        axes[0].bar(Qrange, hist_exc, width=0.8, color=colors_list)
+        for x, y, p in zip(Qrange, hist_exc, perc_exc):
+            axes[0].text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
+
+        axes[0].set_title('Excitatory Neurons')
+        axes[0].set_xlabel('Preferred Numerosity')
+        axes[0].set_ylabel('Number of cells')
+        if not (chance_lev is None):
+            axes[0].axhline(y=chance_lev, color='k', linestyle='--')
+
+        # Istogramma per i neuroni inhibitory
+        inhibitory_indices = excitatory_or_inhibitory == 'inhibitory'
+        hist_inh = [np.sum(pref_num[inhibitory_indices] == q) for q in Qrange]
+        perc_inh = hist_inh / np.sum(hist_inh)
+
+        axes[1].bar(Qrange, hist_inh, width=0.8, color=colors_list)
+        for x, y, p in zip(Qrange, hist_inh, perc_inh):
+            axes[1].text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
+
+        axes[1].set_title('Inhibitory Neurons')
+        axes[1].set_xlabel('Preferred Numerosity')
+        axes[1].set_ylabel('Number of cells')
+        if not (chance_lev is None):
+            axes[1].axhline(y=chance_lev, color='k', linestyle='--')
+
+        # Istogramma per tutti i neuroni (come il caso originale)
+        hist = [np.sum(pref_num == q) for q in Qrange]
+        perc = hist / np.sum(hist)
+
+        axes[2].bar(Qrange, hist, width=0.8, color=colors_list)
+        for x, y, p in zip(Qrange, hist, perc):
+            axes[2].text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
+
+        axes[2].set_title('All Neurons')
+        axes[2].set_xlabel('Preferred Numerosity')
+        axes[2].set_ylabel('Number of cells')
+        if not (chance_lev is None):
+            axes[2].axhline(y=chance_lev, color='k', linestyle='--')
+
+        plt.tight_layout()
+
+        # Save figure
+        if not (save_name is None):
+            if not (save_path is None):
+                plt.savefig(f'{save_path}/{save_name}.svg')
+                plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
+            else:
+                plt.savefig(f'{save_name}.svg')
+                plt.savefig(f'{save_name}.png', dpi=900)
+
+        plt.show()
 
 def abs_dist_tunings(tuning_mat, n_numerosities, absolute_dist=0, save_path = None, save_name=None):
     if absolute_dist == 1:
