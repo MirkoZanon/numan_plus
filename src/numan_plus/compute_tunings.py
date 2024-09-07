@@ -167,90 +167,175 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
 
         plt.show()
 
-def plot_tunings_and_abs_dist(tuning_mat_exc=None, tuning_err_exc=None, 
-                              tuning_mat_inh=None, tuning_err_inh=None,
-                              n_numerosities=0, colors_list=None,
-                              excitatory_or_inhibitory=None, log_scale=False,
-                              save_path=None, save_name=None):
-    """
-    Plots tuning curves and absolute distance tunings for excitatory and inhibitory neurons.
+def plot_tuning_curves(tuning_mat_exc, tuning_err_exc,  colors=None, tuning_mat_inh=None, tuning_err_inh=None, excitatory_or_inhibitory=None):
+    # Number of types of stimuli (should be the same for both matrices)
+    n_stimuli = tuning_mat_exc.shape[0]  # This should match tuning_mat_inh if provided
+
+    # Check if the color list is provided
+    if colors is None:
+        colors = ['red', 'blue', 'green', 'orange', 'purple', 'cyan']  # Default colors
+
+    # Create a single plot for both categories if both are provided
+    if excitatory_or_inhibitory is not None:
+        # Create a figure with subplots
+        fig, axs = plt.subplots(1, 2, figsize=(12, 5))
+
+        # Plot for excitatory neurons
+        for i in range(n_stimuli):
+            axs[0].plot(np.arange(n_stimuli), tuning_mat_exc[i], color=colors[i], label=f'{i}')
+            axs[0].fill_between(np.arange(n_stimuli), 
+                                tuning_mat_exc[i] - tuning_err_exc[i], 
+                                tuning_mat_exc[i] + tuning_err_exc[i], 
+                                color=colors[i], alpha=0.2)  # Error bars
+        axs[0].set_title('Tuning Curves - Excitatory Neurons')
+        axs[0].set_xlabel('Numerosity')
+        axs[0].set_ylabel('Response')
+
+        # Plot for inhibitory neurons
+        if tuning_mat_inh is not None and tuning_err_inh is not None:
+            for i in range(n_stimuli):
+                axs[1].plot(np.arange(n_stimuli), tuning_mat_inh[i], color=colors[i], label=f'{i}')
+                axs[1].fill_between(np.arange(n_stimuli), 
+                                    tuning_mat_inh[i] - tuning_err_inh[i], 
+                                    tuning_mat_inh[i] + tuning_err_inh[i], 
+                                    color=colors[i], alpha=0.2)  # Error bars
+            axs[1].set_title('Tuning Curves - Inhibitory Neurons')
+            axs[1].set_xlabel('Numerosity')
+            axs[1].set_ylabel('Response')
+
+        # Adjust layout and show legend
+        plt.tight_layout()
+        plt.show()
+
+    else:
+        # If no classification provided, plot only excitatory neurons
+        plt.figure(figsize=(10, 5))
+        for i in range(n_stimuli):
+            plt.plot(np.arange(n_stimuli), tuning_mat_exc[i], color=colors[i], label=f'{i}')
+            plt.fill_between(np.arange(n_stimuli), 
+                             tuning_mat_exc[i] - tuning_err_exc[i], 
+                             tuning_mat_exc[i] + tuning_err_exc[i], 
+                             color=colors[i], alpha=0.2)  # Error bars
+        plt.title('Tuning Curves - Excitatory Neurons')
+        plt.xlabel('Numerosity')
+        plt.ylabel('Response')
+        plt.legend(title='Stimuli')
+        plt.show()
     
-    Parameters:
-        tuning_mat_exc, tuning_err_exc: Tuning matrices and errors for excitatory neurons.
-        tuning_mat_inh, tuning_err_inh: Tuning matrices and errors for inhibitory neurons.
-        n_numerosities: Number of numerosities.
-        colors_list: List of colors for plotting.
-        excitatory_or_inhibitory: Optional array to differentiate excitatory and inhibitory neurons.
-        log_scale: If True, also plots log scale.
-        save_path: Path to save the plots.
-        save_name: Name for saving the plot.
-    """
-    Qrange = np.arange(n_numerosities)
+def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, save_file=None, print_stats=True):
+    # Define distance ranges for both absolute distance options
+    distRange_abs_0 = np.arange(-(n_numerosities-1), n_numerosities).tolist()
+    distRange_abs_1 = np.arange(n_numerosities).tolist()
+
+    # Dictionaries to hold tuning values for each distance
+    dist_tuning_dict_abs_0_exc = {str(i): [] for i in distRange_abs_0}
+    dist_tuning_dict_abs_1_exc = {str(i): [] for i in distRange_abs_1}
     
-    # Handle log(0) issues by replacing 0 with a small value
-    log_safe_Qrange = np.where(Qrange == 0, 1e-5, Qrange)
+    # If inhibitory neurons are provided, prepare their dictionaries
+    dist_tuning_dict_abs_0_inh = {str(i): [] for i in distRange_abs_0} if tuning_mat_inh is not None else None
+    dist_tuning_dict_abs_1_inh = {str(i): [] for i in distRange_abs_1} if tuning_mat_inh is not None else None
 
-    fig, axs = plt.subplots(2, 2 if log_scale else 1, figsize=(12, 8))
-    fig.suptitle(save_name)
-
-    # Plot for excitatory neurons
-    if tuning_mat_exc is not None and tuning_err_exc is not None:
-        axs[0, 0].set_title('Excitatory Neurons - Linear Scale')
-        for i, (tc, err) in enumerate(zip(tuning_mat_exc, tuning_err_exc)):
-            axs[0, 0].errorbar(Qrange, tc, err, color=colors_list[i])
-        axs[0, 0].set_xlabel('Numerosity')
-        axs[0, 0].set_ylabel('Normalized Neural Activity')
-
-        if log_scale:
-            axs[0, 1].set_title('Excitatory Neurons - Log Scale')
-            for i, (tc, err) in enumerate(zip(tuning_mat_exc, tuning_err_exc)):
-                axs[0, 1].errorbar(log_safe_Qrange, tc, err, color=colors_list[i])
-            axs[0, 1].set_xscale('log', base=2)
-            axs[0, 1].set_xlabel('Numerosity')
-            axs[0, 1].set_ylabel('Normalized Neural Activity')
-
-    # Plot for inhibitory neurons
-    if tuning_mat_inh is not None and tuning_err_inh is not None:
-        axs[1, 0].set_title('Inhibitory Neurons - Linear Scale')
-        for i, (tc, err) in enumerate(zip(tuning_mat_inh, tuning_err_inh)):
-            axs[1, 0].errorbar(Qrange, tc, err, color=colors_list[i])
-        axs[1, 0].set_xlabel('Numerosity')
-        axs[1, 0].set_ylabel('Normalized Neural Activity')
-
-        if log_scale:
-            axs[1, 1].set_title('Inhibitory Neurons - Log Scale')
-            for i, (tc, err) in enumerate(zip(tuning_mat_inh, tuning_err_inh)):
-                axs[1, 1].errorbar(log_safe_Qrange, tc, err, color=colors_list[i])
-            axs[1, 1].set_xscale('log', base=2)
-            axs[1, 1].set_xlabel('Numerosity')
-            axs[1, 1].set_ylabel('Normalized Neural Activity')
-
-    # Plot absolute distance tunings
-    dist_avg_tuning_exc, dist_err_tuning_exc = abs_dist_tunings(tuning_mat_exc, n_numerosities)
-    dist_avg_tuning_inh, dist_err_tuning_inh = abs_dist_tunings(tuning_mat_inh, n_numerosities)
-
-    plt.tight_layout()
-    if save_name:
-        if save_path:
-            plt.savefig(f'{save_path}/{save_name}.svg')
-            plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
-        else:
-            plt.savefig(f'{save_name}.svg')
-            plt.savefig(f'{save_name}.png', dpi=900)
-
-    plt.show()
-
-# Additional function to calculate absolute distance tunings
-def abs_dist_tunings(tuning_mat, n_numerosities):
-    distRange = np.arange(-(n_numerosities - 1), n_numerosities).tolist()
-    dist_tuning_dict = {str(i): [] for i in distRange}
-    
+    # Populate the dictionaries with tuning values for excitatory neurons
     for pref_n in np.arange(n_numerosities):
         for n in np.arange(n_numerosities):
-            dist_tuning_dict[str(n - pref_n)].append(tuning_mat[pref_n][n])
+            dist_tuning_dict_abs_0_exc[str(n - pref_n)].append(tuning_mat_exc[pref_n][n])
+            dist_tuning_dict_abs_1_exc[str(abs(n - pref_n))].append(tuning_mat_exc[pref_n][n])
+            if tuning_mat_inh is not None:
+                dist_tuning_dict_abs_0_inh[str(n - pref_n)].append(tuning_mat_inh[pref_n][n])
+                dist_tuning_dict_abs_1_inh[str(abs(n - pref_n))].append(tuning_mat_inh[pref_n][n])
 
-    dist_avg_tuning = [np.mean(dist_tuning_dict[key]) for key in dist_tuning_dict.keys()]
-    dist_err_tuning = [np.std(dist_tuning_dict[key]) / np.sqrt(len(dist_tuning_dict[key]))
-                       if len(dist_tuning_dict[key]) > 1 else 0 for key in dist_tuning_dict.keys()]
+    # Calculate average tuning and standard deviation for excitatory neurons
+    dist_avg_tuning_abs_0_exc = [mean(dist_tuning_dict_abs_0_exc[key]) if dist_tuning_dict_abs_0_exc[key] else 0 for key in dist_tuning_dict_abs_0_exc.keys()]
+    dist_avg_tuning_abs_1_exc = [mean(dist_tuning_dict_abs_1_exc[key]) if dist_tuning_dict_abs_1_exc[key] else 0 for key in dist_tuning_dict_abs_1_exc.keys()]
+    
+    dist_err_tuning_abs_0_exc = [np.nanstd(dist_tuning_dict_abs_0_exc[key]) / sqrt(len(dist_tuning_dict_abs_0_exc[key])) if len(dist_tuning_dict_abs_0_exc[key]) > 1 else 0 for key in dist_tuning_dict_abs_0_exc.keys()]
+    dist_err_tuning_abs_1_exc = [np.nanstd(dist_tuning_dict_abs_1_exc[key]) / sqrt(len(dist_tuning_dict_abs_1_exc[key])) if len(dist_tuning_dict_abs_1_exc[key]) > 1 else 0 for key in dist_tuning_dict_abs_1_exc.keys()]
 
-    return dist_avg_tuning, dist_err_tuning
+    # Calculate average tuning and standard deviation for inhibitory neurons
+    dist_avg_tuning_abs_0_inh = [mean(dist_tuning_dict_abs_0_inh[key]) if dist_tuning_dict_abs_0_inh[key] else 0 for key in dist_tuning_dict_abs_0_inh.keys()] if tuning_mat_inh is not None else None
+    dist_avg_tuning_abs_1_inh = [mean(dist_tuning_dict_abs_1_inh[key]) if dist_tuning_dict_abs_1_inh[key] else 0 for key in dist_tuning_dict_abs_1_inh.keys()] if tuning_mat_inh is not None else None
+
+    dist_err_tuning_abs_0_inh = [np.nanstd(dist_tuning_dict_abs_0_inh[key]) / sqrt(len(dist_tuning_dict_abs_0_inh[key])) if len(dist_tuning_dict_abs_0_inh[key]) > 1 else 0 for key in dist_tuning_dict_abs_0_inh.keys()] if tuning_mat_inh is not None else None
+    dist_err_tuning_abs_1_inh = [np.nanstd(dist_tuning_dict_abs_1_inh[key]) / sqrt(len(dist_tuning_dict_abs_1_inh[key])) if len(dist_tuning_dict_abs_1_inh[key]) > 1 else 0 for key in dist_tuning_dict_abs_1_inh.keys()] if tuning_mat_inh is not None else None
+
+    # Set up the figure with a number of subplots
+    num_plots = 2  # Initialize number of plots for excitatory neurons
+    if tuning_mat_inh is not None:
+        num_plots += 2  # Update number of plots to include inhibitory neurons
+        fig, axs = plt.subplots(2, 2, figsize=(10, 8))  # 2x2 layout
+        axs = axs.flatten()  # Flatten for easier indexing
+    else:
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))  # 1x2 layout
+
+    # Plot for excitatory neurons - numerical distance = 0
+    axs[0].errorbar(distRange_abs_0, dist_avg_tuning_abs_0_exc, 
+                    yerr=dist_err_tuning_abs_0_exc, 
+                    color='black')
+    axs[0].set_xticks(distRange_abs_0)
+    axs[0].set_xlabel('Numerical Distance')
+    axs[0].set_ylabel('Normalized Neural Activity')
+    axs[0].set_title('Numerical Distance Tuning Curve (Excitatory)')
+
+    # Plot for excitatory neurons - absolute distance = 1
+    axs[1].errorbar(distRange_abs_1, dist_avg_tuning_abs_1_exc, 
+                    yerr=dist_err_tuning_abs_1_exc, 
+                    color='black')
+    axs[1].set_xticks(distRange_abs_1)
+    axs[1].set_xlabel('Absolute Numerical Distance')
+    axs[1].set_ylabel('Normalized Neural Activity')
+    axs[1].set_title('Absolute Numerical Distance Tuning Curve (Excitatory)')
+
+    # If inhibitory neurons are provided, create their plots
+    if tuning_mat_inh is not None:
+        # Plot for inhibitory neurons - numerical distance = 0
+        axs[2].errorbar(distRange_abs_0, dist_avg_tuning_abs_0_inh, 
+                        yerr=dist_err_tuning_abs_0_inh, 
+                        color='black')
+        axs[2].set_xticks(distRange_abs_0)
+        axs[2].set_xlabel('Numerical Distance')
+        axs[2].set_ylabel('Normalized Neural Activity')
+        axs[2].set_title('Numerical Distance Tuning Curve (Inhibitory)')
+
+        # Plot for inhibitory neurons - absolute distance = 1
+        axs[3].errorbar(distRange_abs_1, dist_avg_tuning_abs_1_inh, 
+                        yerr=dist_err_tuning_abs_1_inh, 
+                        color='black')
+        axs[3].set_xticks(distRange_abs_1)
+        axs[3].set_xlabel('Absolute Numerical Distance')
+        axs[3].set_ylabel('Normalized Neural Activity')
+        axs[3].set_title('Absolute Numerical Distance Tuning Curve (Inhibitory)')
+
+    # Save figures
+    if save_file is not None:
+        plt.savefig(f'{save_file}.svg')
+        plt.savefig(f'{save_file}.png', dpi=900)
+
+    plt.tight_layout()
+    plt.show()
+    
+    # Dynamic distance comparisons for t-tests
+    distance_comparisons = [(i, i+1) for i in range(-n_numerosities + 1, n_numerosities - 1)]
+
+    def print_t_test_table(tuning_dict_abs_0, tuning_dict_abs_1, title):
+        print(f"\n{title}")
+        print(f"{'Distance Pair':<15} {'t-statistic':<15} {'p-value':<10} {'df':<5}")
+        print("="*50)
+        for d1, d2 in distance_comparisons:
+            if str(d1) in tuning_dict_abs_0 and str(d2) in tuning_dict_abs_0:
+                t_stat, p_value = stats.ttest_ind(a=tuning_dict_abs_0[str(d1)], b=tuning_dict_abs_0[str(d2)], equal_var=False)
+                df = len(tuning_dict_abs_0[str(d1)]) + len(tuning_dict_abs_0[str(d2)]) - 2
+                print(f"{d1} vs {d2:<7} {t_stat:.2f}       {p_value:.2f}    {df}")
+                
+        print("\nAbsolute Numerical Distance Comparisons:")
+        print(f"{'Distance Pair':<15} {'t-statistic':<15} {'p-value':<10} {'df':<5}")
+        print("="*50)
+        for d1, d2 in distance_comparisons:
+            if str(d1) in tuning_dict_abs_1 and str(d2) in tuning_dict_abs_1:
+                t_stat, p_value = stats.ttest_ind(a=tuning_dict_abs_1[str(d1)], b=tuning_dict_abs_1[str(d2)], equal_var=False)
+                df = len(tuning_dict_abs_1[str(d1)]) + len(tuning_dict_abs_1[str(d2)]) - 2
+                print(f"{d1} vs {d2:<7} {t_stat:.2f}       {p_value:.2f}    {df}")
+
+    if print_stats:
+        print_t_test_table(dist_tuning_dict_abs_0_exc, dist_tuning_dict_abs_1_exc, "Excitatory Neuron Comparisons")
+        if tuning_mat_inh is not None:
+            print_t_test_table(dist_tuning_dict_abs_0_inh, dist_tuning_dict_abs_1_inh, "Inhibitory Neuron Comparisons")
