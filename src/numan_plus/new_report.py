@@ -6,6 +6,7 @@ import os
 import matplotlib.pyplot as plt
 import warnings
 from tqdm import tqdm
+from matplotlib.backends.backend_pdf import PdfPages
 import pandas as pd
 
 import PyPDF2
@@ -69,6 +70,130 @@ def create_checkbox_pdf(pngs, cells_idx, btchs, filename):
         can.showPage()
         os.remove(pngs[ibtch])
     can.save()
+
+def create_signal_pdf(project, experiment, spot_tag, group_tag, region_tag, saving_folder):
+
+    print('Creating PDF with neurons signals...')
+    os.makedirs(saving_folder, exist_ok=True) 
+    report = Reports(Path(project.main_folder,"processed"), experiment)
+    report.make_direct_signal_reports(spot_tag, group_tag,"number", region_tag,
+                                labels= ["d0","d1","d2","d3","d4","d5"],
+                                # types of plots:
+                                plot_type = 'psh_b',
+                                # which groups to write above the plots, also sorts but how many of these are significant
+                                groups_to_specify=("anova_num_0","anova_num_1","anova_num_2","anova_num_3","anova_num_4","anova_num_5"),
+                                # just for the pdf naming :
+                                # this is to be able to distinguish the pdfs with the same plot type,
+                                # but errors are different or raw traces on/off or front_to_tail
+                                plot_type_tag = '',
+                                t_points_before_stim = 3,
+                                t_points_after_stim = 8,
+                                # whether to plot the individual traces
+                                plot_individual=False,
+                                saving_folder = saving_folder)
+ 
+
+def create_signal_pdf_new(reps_mean, reps_sem, coordinates, baseline_length, post_stim_length, resolution, output_pdf="calcium_signals_with_errorbars.pdf", neurons_per_page=5, neuron_filter=None, classify_neurons=False):
+    """
+    Creates a PDF with calcium signal (dF/F0) plots and error bars, with progress bar indication.
+    
+    Parameters:
+    - reps_mean: np.array of shape (6, 12, n) containing the calcium signal means
+    - reps_std: np.array of shape (6, 12, n) containing the calcium signal standard deviations
+    - coordinates: list of lists of length n, where each element is a list [z, y, x] representing neuron positions
+    - baseline_length: length of the baseline before stimulation
+    - post_stim_length: length after stimulation
+    - resolution: list of three values for the resolution [z_res, y_res, x_res]
+    - output_pdf: name of the output PDF file
+    - neurons_per_page: number of neurons per page (default: 5)
+    - neuron_filter: boolean array of length n to filter which neurons to plot (default: None, plot all)
+    - classify_neurons: If True, classify neurons and add colors and labels for preferred stimulus and excitatory/inhibitory.
+    """
+    num_neurons = reps_mean.shape[2]  # Total number of neurons
+
+    # If no filter is provided, plot all neurons
+    if neuron_filter is None:
+        neuron_filter = np.ones(num_neurons, dtype=bool)
+
+    # Select only the neurons that pass the filter
+    selected_neurons = np.where(neuron_filter)[0]
+    selected_coordinates = [coordinates[idx] for idx in selected_neurons]
+
+    # Create x-ticks for the time points
+    x_ticks = np.linspace(-baseline_length, post_stim_length, 12).astype(int)
+
+    # Define background colors for classification with low alpha
+    colors = ['red', 'gold', 'green', 'blue', 'purple', 'cyan']  ### change here colors, also the length of list if you've different n of stimulus types
+    alpha = 0.2  # Set the transparency level
+
+    # Initialize progress bar
+    total_pages = len(selected_neurons) // neurons_per_page + (1 if len(selected_neurons) % neurons_per_page > 0 else 0)
+    with tqdm(total=total_pages, desc="Generating PDF", unit="page") as pbar:
+        # Create the PDF
+        with PdfPages(output_pdf) as pdf:
+            for i in range(0, len(selected_neurons), neurons_per_page):
+                # Set up the figure for each page
+                fig, axes = plt.subplots(neurons_per_page, 6, figsize=(15, neurons_per_page * 3)) ### change here 6 if you have different number of stimulus types (numerosities)
+                fig.subplots_adjust(hspace=0.6, wspace=0.3)
+
+                # Iterate over the neurons on the current page
+                for j in range(neurons_per_page):
+                    if i + j >= len(selected_neurons):
+                        break  # Stop if we exceed the number of selected neurons
+
+                    neuron_idx = selected_neurons[i + j]
+                    coord = selected_coordinates[i + j]
+
+                    # Convert coordinates using resolution
+                    coord_converted = [int(coord[k] / resolution[k]) for k in range(3)]
+
+                    # Neuron classification
+                    if classify_neurons:
+                        # Calculate the absolute average signal in the [baseline_length:baseline_length+3] window
+                        averages = [np.abs(np.mean(reps_mean[stim_idx, baseline_length:baseline_length + 3, neuron_idx])) for stim_idx in range(6)] ### change here 6 if you have different number of stimulus types (numerosities)
+                        preferred_stimulus_idx = np.argmax(averages)
+
+                        # Check if the neuron is excitatory or inhibitory for the preferred stimulus
+                        original_avg = np.mean(reps_mean[preferred_stimulus_idx, baseline_length:baseline_length + 3, neuron_idx])
+                        neuron_type = 'excitatory' if original_avg > 0 else 'inhibitory'
+
+                        # Add neuron type and classification to the title
+                        neuron_title = f'Neuron {neuron_idx} (z={coord_converted[0]}, y={coord_converted[1]}, x={coord_converted[2]}) - {neuron_type} number {preferred_stimulus_idx} neuron'
+                    else:
+                        neuron_title = f'Neuron {neuron_idx} (z={coord_converted[0]}, y={coord_converted[1]}, x={coord_converted[2]})'
+
+                    # Center the title above the third subplot (column 3)
+                    axes[j, 2].set_title(neuron_title, fontsize=14, fontweight='bold', pad=20)  # Center title in third column
+
+                    for stim_idx in range(6):  # Iterate over each stimulus type
+                        ax = axes[j, stim_idx] if neurons_per_page > 1 else axes[stim_idx]
+
+                        # If neuron classification is enabled, highlight the preferred stimulus with low alpha
+                        if classify_neurons and stim_idx == preferred_stimulus_idx:
+                            ax.set_facecolor(colors[preferred_stimulus_idx])
+                            ax.patch.set_alpha(alpha)  # Set transparency level
+
+                        # Plot signals with error bars
+                        ax.errorbar(np.arange(12), reps_mean[stim_idx, :, neuron_idx],
+                                    yerr=reps_sem[stim_idx, :, neuron_idx], fmt='-o')
+                        ax.set_xlabel('time [s]' if j == neurons_per_page - 1 else '')  # X-label only on the last row
+                        ax.set_ylabel('dF/F0' if stim_idx == 0 else '')  # Y-label only on the first plot of the row
+
+                        # Set x-ticks to be integers from -baseline_length to +post_stim_length
+                        ax.set_xticks(np.arange(12))  # Use original indices
+                        ax.set_xticklabels(x_ticks)  # Set x-tick labels
+
+                        # Add vertical dashed line for stimulus at baseline_length position
+                        ax.axvline(x=baseline_length, color='red', linestyle='--', linewidth=1)
+
+                # Save the page to the PDF
+                pdf.savefig(fig)
+                plt.close(fig)
+
+                # Update the progress bar
+                pbar.update(1)
+
+    print(f"PDF saved as {output_pdf}")
 
 
 class Reports:
