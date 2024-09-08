@@ -74,7 +74,8 @@ def create_checkbox_pdf(pngs, cells_idx, btchs, filename):
 def create_signal_pdf(project, experiment, spot_tag, group_tag, region_tag, saving_folder=None):
 
     print('Creating PDF with neurons signals...')
-    os.makedirs(saving_folder, exist_ok=True) 
+    if saving_folder is not None:
+        os.makedirs(saving_folder, exist_ok=True) 
     report = Reports(Path(project.main_folder,"processed"), experiment)
     report.make_direct_signal_reports(spot_tag, group_tag,"number", region_tag,
                                 labels= ["d0","d1","d2","d3","d4","d5"],
