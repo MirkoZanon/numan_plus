@@ -71,7 +71,7 @@ def create_checkbox_pdf(pngs, cells_idx, btchs, filename):
         os.remove(pngs[ibtch])
     can.save()
 
-def create_signal_pdf(project, experiment, spot_tag, group_tag, region_tag, saving_folder):
+def create_signal_pdf(project, experiment, spot_tag, group_tag, region_tag, saving_folder=None):
 
     print('Creating PDF with neurons signals...')
     os.makedirs(saving_folder, exist_ok=True) 
@@ -472,7 +472,7 @@ class Reports:
                             tmp_folder=None,
                             pdf_filename=None,
                             checkbox=False,
-                            saving_folder=''):
+                            saving_folder=None):
         """
         Generates a pdf with the specified type of plots.
 
@@ -533,11 +533,20 @@ class Reports:
         if pdf_filename is None:
             if checkbox:
                 # filename to save pdf with all the significant traces and checkboxes
-                pdf_filename = f"{self.project}/spots/reports/{saving_folder}/" \
-                               f"CHOOSE_{plot_type}{plot_type_tag}_from_{spot_tag}_group_{group_tag}_{region}.pdf"
+                if saving_folder is None:
+                    pdf_filename = f"{self.project}/spots/reports/" \
+                                f"CHOOSE_{plot_type}{plot_type_tag}_from_{spot_tag}_group_{group_tag}_{region}.pdf"
+                else:
+                    pdf_filename = f"{self.project}/spots/reports/{saving_folder}/" \
+                                f"CHOOSE_{plot_type}{plot_type_tag}_from_{spot_tag}_group_{group_tag}_{region}.pdf"
+
             else:
                 # filename to save pdf with all the significant traces
-                pdf_filename = f"{self.project}/spots/reports/{saving_folder}/" \
+                if saving_folder:
+                    pdf_filename = f"{self.project}/spots/reports/{saving_folder}/" \
+                               f"{plot_type}{plot_type_tag}_from_{spot_tag}_group_{group_tag}_{region}.pdf"
+                else:
+                    pdf_filename = f"{self.project}/spots/reports/" \
                                f"{plot_type}{plot_type_tag}_from_{spot_tag}_group_{group_tag}_{region}.pdf"
 
         spots = analysis.Spots.from_json(f"{self.project}/spots/signals/spots_{spot_tag}.json")
