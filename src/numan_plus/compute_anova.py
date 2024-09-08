@@ -224,7 +224,7 @@ def compute_anova_neurons(Q, C, Hf, alpha_level, n_permutations, filtered_idx):#
     #anova_df.to_csv(f'./caiman_final_datasets/numerosityCells_{brain_region_tag}.csv')
     #print('\033[1m\nYour number units are calculated.\033[0m\nYou can find them in ./processed/caiman_final_dataset')
 
-    return R, chance_lev, anova_df#, save_df
+    return R, chance_lev, anova_df, pref_num, excitatory_or_inhibitory#, save_df
 
 def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations):#, save_df):
 
