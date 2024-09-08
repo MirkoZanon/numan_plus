@@ -177,7 +177,7 @@ def ANOVA_preprocess (experiment, stim_signal_exact, brain_region_tag, stim_volu
         stim_signal_prov[:,:,i] = stim_add_signal
     ## create final matrix Hf for anova (cells X trials)
     stim_signal = stim_signal_prov.mean(axis=2)
-    print(' You have (cells,trials): ' + str(stim_signal.shape)+'\n')
+    print('You are passing to the ANOVA, (cells,trials): ' + str(stim_signal.shape)+'\n')
     annotation_dict2= {f"cell_{ic}": stim_signal[ic] for ic in np.arange(len(signals))}
     annotation_dict=experiment.get_volume_annotations(stim_volumes)
     annotation_dict.update(annotation_dict2)
