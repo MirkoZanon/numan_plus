@@ -106,6 +106,7 @@ def anova_two_way_permutations(A, B, Y, num_perm, show_progress=True):
     pAB[active_cells] = np.sum(np.greater_equal(FAB, FAB0), axis=1) / nperm
 
     return pA, pB, pAB
+
 def group_logical_and(group1, group2):
     """
     Performs element-wise logical and

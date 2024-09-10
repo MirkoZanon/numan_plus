@@ -100,15 +100,15 @@ def plot_bar_with_error(ax, Qrange, hist, chance_means, chance_errors, title, xl
     plt.xticks(Qrange)
 
 
-def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_means=None, chance_errors=None, save_path=None, save_name=None):
-    """Main function to plot selective cells histogram."""
+def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_means=None, chance_errors=None, file_name=None):
+    """Main function to plot selective cells histogram with simplified save path."""
     Qrange = np.arange(n_numerosities)
 
     if excitatory_or_inhibitory is None:
         # Case for all neurons
         hist = [np.sum(pref_num == q) for q in Qrange]
         fig, ax = plt.subplots(figsize=(4, 4))
-        plot_bar_with_error(ax, Qrange, hist, chance_means['total'], chance_errors['total'], save_name, 'Preferred Numerosity', 'Number of cells', colors_list)
+        plot_bar_with_error(ax, Qrange, hist, chance_means, chance_errors, "All Neurons", 'Preferred Numerosity', 'Number of cells', colors_list)
         plt.xticks(Qrange)
         plt.legend()
     else:
@@ -141,16 +141,22 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
         plt.tight_layout()
 
     # Save figure
-    if save_name is not None:
-        if save_path is not None:
-            plt.savefig(f'{save_path}/{save_name}.svg')
-            plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
-        else:
-            plt.savefig(f'{save_name}.svg')
-            plt.savefig(f'{save_name}.png', dpi=900)
+    if file_name:
+        try:
+            if file_name.endswith('.svg'):
+                plt.savefig(file_name)
+            elif file_name.endswith('.png'):
+                plt.savefig(file_name, dpi=900)
+            else:
+                print("Error: file_name should end with either '.svg' or '.png'")
+                return
+            #print(f"File saved successfully at: {os.path.abspath(file_name)}")
+        except Exception as e:
+            print(f"Error while saving file: {e}")
 
     plt.show()
-    
+
+
 def plot_tuning_curves(tuning_mat_exc, tuning_err_exc,  colors=None, tuning_mat_inh=None, tuning_err_inh=None, excitatory_or_inhibitory=None):
     # Number of types of stimuli (should be the same for both matrices)
     n_stimuli = tuning_mat_exc.shape[0]  # This should match tuning_mat_inh if provided
