@@ -228,24 +228,31 @@ def compute_anova_neurons(Q, C, Hf, alpha_level, n_permutations, filtered_idx):#
 
     return anova_cells, R, chance_lev, anova_df, pref_num, excitatory_or_inhibitory#, save_df
 
-def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_progress=True):
-    print('\nRunning permutation ANOVA on shuffled dataset:')
+def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_progress=False):
+    if show_progress:
+        print('\nRunning permutation ANOVA on shuffled dataset:')
 
+    # Shuffle the datasets
     Q_S = shuffle(Q, random_state=0)
     C_S = shuffle(C, random_state=0)
 
-    # Find numerosity selective units (anova_cells) using a two-way ANOVA with permutations
+    # Perform two-way ANOVA with permutations
     pN_s, pC_s, pNC_s = anova_two_way_permutations(Q_S, C_S, Hf, n_permutations, show_progress)
+    
+    # Identify selective units based on p-values
     anova_cells_shuffled = np.where((pN_s < alpha_level) & (pNC_s > alpha_level) & (pC_s > alpha_level))[0]
     R_S = Hf[:, anova_cells_shuffled]
 
-    print('Number of anova cells on random shuffled data = %i (%0.2f%%)' % (len(anova_cells_shuffled), 100 * len(anova_cells_shuffled) / Hf.shape[1]))
+    if show_progress:
+        print('Number of ANOVA cells on random shuffled data = %i (%0.2f%%)' % 
+              (len(anova_cells_shuffled), 100 * len(anova_cells_shuffled) / Hf.shape[1]))
 
+    # Compute preferred numerosity for the selected neurons
     pref_num_shuffled, excitatory_or_inhibitory_shuffled = compute_tunings.preferred_numerosity(Q_S, R_S)
 
     return anova_cells_shuffled, Q_S, C_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled
 
-def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, show_inner_progress=False):
+def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, show_progress=False):
     """
     Runs the original 'compute_shuffled_anova_neurons' function n_reps times
     to estimate the average number of neurons detected by chance.
@@ -264,17 +271,18 @@ def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, sh
     n_neurons_shuffled = []
 
     # Use tqdm for a progress bar if show_progress is True
-    for i in tqdm(range(n_reps), desc='Shuffling repetitions'):
-        # Call the original function, capturing the output number of ANOVA cells
-        anova_cells_shuffled, _, _, _, _, _ = compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_inner_progress)
+    for i in tqdm(range(n_reps), desc='Shuffling repetitions', disable=not show_progress):
+        # Capture the number of ANOVA cells from the shuffled data
+        anova_cells_shuffled, _, _, _, _, _ = compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations)
         n_neurons_shuffled.append(len(anova_cells_shuffled))
 
     # Calculate the mean and SEM of the number of significant neurons
     chance_mean = np.mean(n_neurons_shuffled)
     chance_sem = np.std(n_neurons_shuffled) / np.sqrt(n_reps)
 
-    print(f"Chance level: {chance_mean} ± {chance_sem}")
+    print(f"Chance level: {chance_mean:.2f} ± {chance_sem:.2f}")
     return chance_mean, chance_sem
+
 
 def replot_tuning_curves(output_real, output_shuffled):
     # Extract data from the real output dictionary
