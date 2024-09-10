@@ -395,3 +395,49 @@ def save_anova_spots(spots, anova_df, spot_tag):
                     rewrite=True)
 
     spots.to_json(f"./spots/signals/spots_{spot_tag}.json")
+
+
+
+def plot_tunings(Q, R, Q_S, R_S, brain_region_tag, chance_mean, chance_error, n_numerosities, colors_list, save_file=None, print_stats=True, plot_figures=True):
+
+    # Create new folder to save ANOVA graphs
+    os.makedirs('./anova_figures', exist_ok=True)
+    save_path = './anova_figures'
+
+    # Real data ######################################################################
+    print('\033[1m\nREAL DATA\033[0m\n')
+
+    pref_num, excitatory_or_inhibitory = compute_tunings.preferred_numerosity(Q, R)
+ 
+    tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh = compute_tunings.get_tuning_matrix(
+        Q, R, pref_num, excitatory_or_inhibitory, n_numerosities
+    )
+    
+    compute_tunings.plot_tuning_curves(
+        tuning_mat_exc, tuning_err_exc, colors_list, 
+        tuning_mat_inh, tuning_err_inh, excitatory_or_inhibitory
+    )
+    output = compute_tunings.plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh, save_file, print_stats, plot_figures)
+
+    
+    # Shuffled data #####################################################################
+    print('\033[1m\nSHUFFLED DATA\033[0m\n')
+
+    pref_num_shuffled, excitatory_or_inhibitory_shuffled = compute_tunings.preferred_numerosity(Q_S, R_S)
+    
+    tuning_mat_exc_shuffled, tuning_err_exc_shuffled, tuning_mat_inh_shuffled, tuning_err_inh_shuffled = compute_tunings.get_tuning_matrix(
+        Q_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled, n_numerosities
+    )
+
+    compute_tunings.plot_tuning_curves(
+        tuning_mat_exc_shuffled, tuning_err_exc_shuffled, colors_list, 
+        tuning_mat_inh_shuffled, tuning_err_inh_shuffled, excitatory_or_inhibitory_shuffled
+    )
+    output_shuffled = compute_tunings.plot_abs_dist_tunings(
+        tuning_mat_exc_shuffled, n_numerosities, tuning_mat_inh_shuffled, 
+        save_file=None, print_stats=False, plot_figures=False
+    )
+
+    # Plot real and shuffled tuning curves together
+    print('\nOVERALL TUNINGS BASED ON NUMERICAL DISTANCE')
+    compute_tunings.replot_tuning_curves(output, output_shuffled)
