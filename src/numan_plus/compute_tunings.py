@@ -157,7 +157,7 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
     plt.show()
 
 
-def plot_tuning_curves(tuning_mat_exc, tuning_err_exc,  colors=None, tuning_mat_inh=None, tuning_err_inh=None, excitatory_or_inhibitory=None):
+def plot_tuning_curves(tuning_mat_exc, tuning_err_exc,  colors=None, tuning_mat_inh=None, tuning_err_inh=None, excitatory_or_inhibitory=None, save_name=None):
     # Number of types of stimuli (should be the same for both matrices)
     n_stimuli = tuning_mat_exc.shape[0]  # This should match tuning_mat_inh if provided
 
@@ -195,6 +195,22 @@ def plot_tuning_curves(tuning_mat_exc, tuning_err_exc,  colors=None, tuning_mat_
 
         # Adjust layout and show legend
         plt.tight_layout()
+
+        # Save figure if save_name is provided
+        # Save figure
+        if save_name:
+            try:
+                if save_name.endswith('.svg'):
+                    plt.savefig(save_name)
+                elif save_name.endswith('.png'):
+                    plt.savefig(save_name, dpi=900)
+                else:
+                    print("Error: save_name should end with either '.svg' or '.png'")
+                    return
+                #print(f"File saved successfully at: {os.path.abspath(save_name)}")
+            except Exception as e:
+                print(f"Error while saving file: {e}")
+
         plt.show()
 
     else:
@@ -210,6 +226,20 @@ def plot_tuning_curves(tuning_mat_exc, tuning_err_exc,  colors=None, tuning_mat_
         plt.xlabel('Numerosity')
         plt.ylabel('Response')
         plt.legend(title='Stimuli')
+        
+        if save_name:
+            try:
+                if save_name.endswith('.svg'):
+                    plt.savefig(save_name)
+                elif save_name.endswith('.png'):
+                    plt.savefig(save_name, dpi=900)
+                else:
+                    print("Error: save_name should end with either '.svg' or '.png'")
+                    return
+                #print(f"File saved successfully at: {os.path.abspath(save_name)}")
+            except Exception as e:
+                print(f"Error while saving file: {e}")
+
         plt.show()
     
 def populate_tuning_dicts(tuning_mat_exc, tuning_mat_inh, n_numerosities):
@@ -372,7 +402,7 @@ def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, s
         'distRange_abs_1': distRange_abs_1
     }
 
-def replot_tuning_curves(output_real, output_shuffled):
+def replot_tuning_curves(output_real, output_shuffled, save_name=None):
     # Extract data from the real output dictionary
     exc_avg_tuning_abs_0_real = output_real['exc_avg_tuning_abs_0']
     exc_err_tuning_abs_0_real = output_real['exc_err_tuning_abs_0']
@@ -461,49 +491,20 @@ def replot_tuning_curves(output_real, output_shuffled):
         axs[3].legend()
 
     plt.tight_layout()
+
+    # Save figure if save_name is provided
+    # Save figure
+    if save_name:
+        try:
+            if save_name.endswith('.svg'):
+                plt.savefig(save_name)
+            elif save_name.endswith('.png'):
+                plt.savefig(save_name, dpi=900)
+            else:
+                print("Error: save_name should end with either '.svg' or '.png'")
+                return
+            #print(f"File saved successfully at: {os.path.abspath(save_name)}")
+        except Exception as e:
+            print(f"Error while saving file: {e}")
+
     plt.show()
-
-
-def plot_tunings(Q, R, Q_S, R_S, brain_region_tag, chance_mean, chance_error, n_numerosities, colors_list, save_file=None, print_stats=True, plot_figures=True):
-
-    # Create new folder to save ANOVA graphs
-    os.makedirs('./anova_figures', exist_ok=True)
-    save_path = './anova_figures'
-
-    # Real data ######################################################################
-    print('\033[1m\nREAL DATA\033[0m\n')
-
-    pref_num, excitatory_or_inhibitory = preferred_numerosity(Q, R)
- 
-    tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh = get_tuning_matrix(
-        Q, R, pref_num, excitatory_or_inhibitory, n_numerosities
-    )
-    
-    plot_tuning_curves(
-        tuning_mat_exc, tuning_err_exc, colors_list, 
-        tuning_mat_inh, tuning_err_inh, excitatory_or_inhibitory
-    )
-    output = plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh, save_file, print_stats, plot_figures)
-
-    
-    # Shuffled data #####################################################################
-    print('\033[1m\nSHUFFLED DATA\033[0m\n')
-
-    pref_num_shuffled, excitatory_or_inhibitory_shuffled = preferred_numerosity(Q_S, R_S)
-    
-    tuning_mat_exc_shuffled, tuning_err_exc_shuffled, tuning_mat_inh_shuffled, tuning_err_inh_shuffled = get_tuning_matrix(
-        Q_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled, n_numerosities
-    )
-
-    plot_tuning_curves(
-        tuning_mat_exc_shuffled, tuning_err_exc_shuffled, colors_list, 
-        tuning_mat_inh_shuffled, tuning_err_inh_shuffled, excitatory_or_inhibitory_shuffled
-    )
-    output_shuffled = plot_abs_dist_tunings(
-        tuning_mat_exc_shuffled, n_numerosities, tuning_mat_inh_shuffled, 
-        save_file=None, print_stats=False, plot_figures=False
-    )
-
-    # Plot real and shuffled tuning curves together
-    print('\nOVERALL TUNINGS BASED ON NUMERICAL DISTANCE')
-    replot_tuning_curves(output, output_shuffled)
