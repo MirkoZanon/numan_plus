@@ -74,21 +74,24 @@ def get_tuning_matrix(Q, R, pref_num, excitatory_or_inhibitory, n_numerosities):
 
     return tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh
 
-def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_lev=None, save_path=None, save_name=None):
+def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_mean=None, chance_error=None, save_path=None, save_name=None):
     Qrange = np.arange(n_numerosities)
     
     if excitatory_or_inhibitory is None:
-        # Caso originale: plottare l'istogramma di tutti i neuroni
+        # Case for all neurons
         hist = [np.sum(pref_num == q) for q in Qrange]
         perc = hist / np.sum(hist)
 
         plt.figure(figsize=(4, 4))
         plt.bar(Qrange, hist, width=0.8, color=colors_list)
+
         for x, y, p in zip(Qrange, hist, perc):
             plt.text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
 
-        if not (chance_lev is None):
-            plt.axhline(y=chance_lev, color='k', linestyle='--')
+        # Plot the chance levels with error bars
+        if not (chance_mean is None) and not (chance_error is None):
+            plt.errorbar(Qrange, chance_mean, yerr=chance_error, fmt='k--', capsize=5, label='Chance Level')
+            plt.legend()
 
         plt.xticks(np.arange(n_numerosities), np.arange(n_numerosities).tolist())
         plt.xlabel('Preferred Numerosity')
@@ -107,10 +110,10 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
         plt.show()
 
     else:
-        # Se excitatory_or_inhibitory è fornito, plotta i tre subplots
+        # Case with excitatory and inhibitory neurons
         fig, axes = plt.subplots(1, 3, figsize=(12, 4))
 
-        # Istogramma per i neuroni excitatory
+        # Excitatory neurons histogram
         excitatory_indices = excitatory_or_inhibitory == 'excitatory'
         hist_exc = [np.sum(pref_num[excitatory_indices] == q) for q in Qrange]
         perc_exc = hist_exc / np.sum(hist_exc)
@@ -122,10 +125,11 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
         axes[0].set_title('Excitatory Neurons')
         axes[0].set_xlabel('Preferred Numerosity')
         axes[0].set_ylabel('Number of cells')
-        if not (chance_lev is None):
-            axes[0].axhline(y=chance_lev, color='k', linestyle='--')
 
-        # Istogramma per i neuroni inhibitory
+        if not (chance_mean is None) and not (chance_error is None):
+            axes[0].errorbar(Qrange, chance_mean, yerr=chance_error, fmt='k--', capsize=5)
+
+        # Inhibitory neurons histogram
         inhibitory_indices = excitatory_or_inhibitory == 'inhibitory'
         hist_inh = [np.sum(pref_num[inhibitory_indices] == q) for q in Qrange]
         perc_inh = hist_inh / np.sum(hist_inh)
@@ -137,10 +141,11 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
         axes[1].set_title('Inhibitory Neurons')
         axes[1].set_xlabel('Preferred Numerosity')
         axes[1].set_ylabel('Number of cells')
-        if not (chance_lev is None):
-            axes[1].axhline(y=chance_lev, color='k', linestyle='--')
 
-        # Istogramma per tutti i neuroni (come il caso originale)
+        if not (chance_mean is None) and not (chance_error is None):
+            axes[1].errorbar(Qrange, chance_mean, yerr=chance_error, fmt='k--', capsize=5)
+
+        # All neurons histogram
         hist = [np.sum(pref_num == q) for q in Qrange]
         perc = hist / np.sum(hist)
 
@@ -151,8 +156,9 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
         axes[2].set_title('All Neurons')
         axes[2].set_xlabel('Preferred Numerosity')
         axes[2].set_ylabel('Number of cells')
-        if not (chance_lev is None):
-            axes[2].axhline(y=chance_lev, color='k', linestyle='--')
+
+        if not (chance_mean is None) and not (chance_error is None):
+            axes[2].errorbar(Qrange, chance_mean, yerr=chance_error, fmt='k--', capsize=5)
 
         plt.tight_layout()
 
