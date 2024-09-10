@@ -105,9 +105,6 @@ def plot_bar_with_error(ax, Qrange, hist, chance_means, chance_errors, title, xl
     # Draw additional dotted line for total neurons
     if alpha_lev is not None and all_neurons is not None:
         n_groups = len(Qrange)
-
-        print(n_groups)
-        print(all_neurons.shape)
         y_value = all_neurons.shape[0] * alpha_lev / n_groups
         ax.axhline(y=y_value, color='gray', linestyle=':', linewidth=1, label='Alpha Level Line')
 
