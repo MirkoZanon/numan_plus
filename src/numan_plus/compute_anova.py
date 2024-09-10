@@ -237,7 +237,7 @@ def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_p
     C_S = shuffle(C, random_state=0)
 
     # Perform two-way ANOVA with permutations
-    pN_s, pC_s, pNC_s = compute_anova.anova_two_way_permutations(Q_S, C_S, Hf, n_permutations, show_progress)
+    pN_s, pC_s, pNC_s = anova_two_way_permutations(Q_S, C_S, Hf, n_permutations, show_progress)
     
     # Identify selective units based on p-values
     anova_cells_shuffled = np.where((pN_s < alpha_level) & (pNC_s > alpha_level) & (pC_s > alpha_level))[0]
