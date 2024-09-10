@@ -76,43 +76,54 @@ def get_tuning_matrix(Q, R, pref_num, excitatory_or_inhibitory, n_numerosities):
 
     return tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh
 
-def plot_bar_with_error(ax, Qrange, hist, chance_means, chance_errors, title, xlabel, ylabel, colors_list):
-    """Helper function to plot bar chart with error shading and chance means as horizontal bars."""
+
+def plot_bar_with_error(ax, Qrange, hist, chance_means, chance_errors, title, xlabel, ylabel, colors_list, alpha_lev=None, all_neurons=None):
+    """Helper function to plot bar chart with error shading and a single averaged chance mean with error bar."""
     perc = hist / np.sum(hist)
     ax.bar(Qrange, hist, width=0.9, color=colors_list, alpha=0.7)  # Added alpha for transparency
 
     # Update text positioning and formatting
     for x, y, p in zip(Qrange, hist, perc):
-        ax.text(x - 0.4, 0, str(y) + '\n' + str(round(p * 100, 1)) + '%', ha='left', va='bottom', fontsize=9)  # Positioning text inside the canvas
+        ax.text(x - 0.4, 0, str(y) + '\n' + str(round(p * 100, 1)) + '%', ha='left', va='bottom', fontsize=9)
 
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
+    # Calculate average chance level and error
     if chance_means is not None and chance_errors is not None:
-        for q in Qrange:
-            # Draw horizontal line for chance mean
-            ax.hlines(y=chance_means[q], xmin=q - 0.4, xmax=q + 0.4, color='black', linewidth=2, label='Chance Mean' if q == 0 else "")
-            # Draw error bar as horizontal line above the chance mean
-            ax.hlines(y=chance_means[q] - chance_errors[q], xmin=q - 0.4, xmax=q + 0.4, color='black', linestyle='--', linewidth=1)
-            ax.hlines(y=chance_means[q] + chance_errors[q], xmin=q - 0.4, xmax=q + 0.4, color='black', linestyle='--', linewidth=1)
+        avg_chance_mean = np.mean([chance_means[q] for q in Qrange])
+        avg_chance_error = np.sqrt(np.mean([chance_errors[q]**2 for q in Qrange]))  # SEM as sqrt of mean variance
+
+        # Draw horizontal line for the averaged chance mean
+        ax.hlines(y=avg_chance_mean, xmin=min(Qrange) - 0.4, xmax=max(Qrange) + 0.4, color='black', linewidth=2, label='Avg. Chance Mean')
+
+        # Draw error bar
+        ax.hlines(y=avg_chance_mean - avg_chance_error, xmin=min(Qrange) - 0.4, xmax=max(Qrange) + 0.4, color='black', linestyle='--', linewidth=1)
+        ax.hlines(y=avg_chance_mean + avg_chance_error, xmin=min(Qrange) - 0.4, xmax=max(Qrange) + 0.4, color='black', linestyle='--', linewidth=1)
+
+    # Draw additional dotted line for total neurons
+    if alpha_lev is not None and all_neurons is not None:
+        n_groups = len(Qrange)
+
+        print(n_groups)
+        print(all_neurons.shape)
+        y_value = all_neurons.shape[0] * alpha_lev / n_groups
+        ax.axhline(y=y_value, color='gray', linestyle=':', linewidth=1, label='Alpha Level Line')
 
     plt.xticks(Qrange)
 
 
-def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_means=None, chance_errors=None, file_name=None):
+def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_means=None, chance_errors=None, alpha_lev=None, all_neurons=None, file_name=None):
     """Main function to plot selective cells histogram with simplified save path."""
     Qrange = np.arange(n_numerosities)
 
     if excitatory_or_inhibitory is None:
-        # Case for all neurons
         hist = [np.sum(pref_num == q) for q in Qrange]
         fig, ax = plt.subplots(figsize=(4, 4))
-        plot_bar_with_error(ax, Qrange, hist, chance_means, chance_errors, "All Neurons", 'Preferred Numerosity', 'Number of cells', colors_list)
-        plt.xticks(Qrange)
+        plot_bar_with_error(ax, Qrange, hist, chance_means, chance_errors, "All Neurons", 'Preferred Numerosity', 'Number of cells', colors_list, alpha_lev, all_neurons)
         plt.legend()
     else:
-        # Case with excitatory and inhibitory neurons
         fig, axes = plt.subplots(1, 3, figsize=(12, 4))
 
         # Excitatory neurons
@@ -136,7 +147,7 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
         plot_bar_with_error(axes[2], Qrange, hist, 
                             chance_means['total'], 
                             chance_errors['total'], 
-                            'All Neurons', 'Preferred Numerosity', 'Number of cells', colors_list)
+                            'All Neurons', 'Preferred Numerosity', 'Number of cells', colors_list, alpha_lev, all_neurons)
 
         plt.tight_layout()
 
@@ -150,7 +161,6 @@ def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory
             else:
                 print("Error: file_name should end with either '.svg' or '.png'")
                 return
-            #print(f"File saved successfully at: {os.path.abspath(file_name)}")
         except Exception as e:
             print(f"Error while saving file: {e}")
 
