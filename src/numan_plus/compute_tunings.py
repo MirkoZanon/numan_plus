@@ -228,7 +228,7 @@ def plot_tuning_curves(tuning_mat_exc, tuning_err_exc,  colors=None, tuning_mat_
         plt.legend(title='Stimuli')
         plt.show()
     
-def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, save_file=None, print_stats=True):
+def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, save_file=None, print_stats=True, plot_figures=True):
     # Define distance ranges for both absolute distance options
     distRange_abs_0 = np.arange(-(n_numerosities-1), n_numerosities).tolist()
     distRange_abs_1 = np.arange(n_numerosities).tolist()
@@ -316,8 +316,10 @@ def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, s
         plt.savefig(f'{save_file}.svg')
         plt.savefig(f'{save_file}.png', dpi=900)
 
-    plt.tight_layout()
-    plt.show()
+    # Show the figures if the option is set
+    if plot_figures:
+        plt.tight_layout()
+        plt.show()
     
     # Dynamic distance comparisons for t-tests
     distance_comparisons = [(i, i+1) for i in range(-n_numerosities + 1, n_numerosities - 1)]
@@ -331,7 +333,7 @@ def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, s
                 t_stat, p_value = stats.ttest_ind(a=tuning_dict_abs_0[str(d1)], b=tuning_dict_abs_0[str(d2)], equal_var=False)
                 df = len(tuning_dict_abs_0[str(d1)]) + len(tuning_dict_abs_0[str(d2)]) - 2
                 print(f"{d1} vs {d2:<7} {t_stat:.2f}       {p_value:.2f}    {df}")
-                
+
         print("\nAbsolute Numerical Distance Comparisons:")
         print(f"{'Distance Pair':<15} {'t-statistic':<15} {'p-value':<10} {'df':<5}")
         print("="*50)
@@ -341,12 +343,12 @@ def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, s
                 df = len(tuning_dict_abs_1[str(d1)]) + len(tuning_dict_abs_1[str(d2)]) - 2
                 print(f"{d1} vs {d2:<7} {t_stat:.2f}       {p_value:.2f}    {df}")
 
+    # Print the t-test table if specified
     if print_stats:
-        print_t_test_table(dist_tuning_dict_abs_0_exc, dist_tuning_dict_abs_1_exc, "Excitatory Neuron Comparisons")
+        print_t_test_table(dist_tuning_dict_abs_0_exc, dist_tuning_dict_abs_1_exc, 'Excitatory Neuron Comparisons')
         if tuning_mat_inh is not None:
-            print_t_test_table(dist_tuning_dict_abs_0_inh, dist_tuning_dict_abs_1_inh, "Inhibitory Neuron Comparisons")
-    
-    # Return data necessary for reconstructing the curves
+            print_t_test_table(dist_tuning_dict_abs_0_inh, dist_tuning_dict_abs_1_inh, 'Inhibitory Neuron Comparisons')
+
     return {
         'exc_avg_tuning_abs_0': dist_avg_tuning_abs_0_exc,
         'exc_err_tuning_abs_0': dist_err_tuning_abs_0_exc,
