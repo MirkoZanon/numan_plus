@@ -65,8 +65,8 @@ def anova_two_way(A, B, Y):
     return pA, pB, pAB, FA, FB, FAB
 
 
-def anova_two_way_permutations(A, B, Y, num_perm):
-    a,b,c, FA0, FB0, FAB0 = anova_two_way(A,B,Y) # p is dimention of cells, F only of active cells
+def anova_two_way_permutations(A, B, Y, num_perm, show_progress=True):
+    a, b, c, FA0, FB0, FAB0 = anova_two_way(A, B, Y)
     num_cells = Y.shape[1]
 
     A_levels = np.unique(A); a = len(A_levels)
@@ -77,7 +77,6 @@ def anova_two_way_permutations(A, B, Y, num_perm):
 
     Y = Y4D.reshape((-1, Y.shape[1]))
     
-    # only test cells (units) that are active (gave a nonzero response to at least one stimulus) to avoid division by zero errors
     active_cells = np.where(np.abs(Y).max(axis=0)>0)[0]
     Y4D = Y4D[:,:,:,active_cells]
     Y = Y[:, active_cells]
@@ -86,24 +85,27 @@ def anova_two_way_permutations(A, B, Y, num_perm):
     FB0 = np.expand_dims(FB0, axis=1)
     FAB0 = np.expand_dims(FAB0, axis=1)
     nperm = num_perm
-    FA = np.nan*np.zeros((active_cells.shape[0], nperm)) #### check if is ok to take activecells along 0!!!!!!
+    FA = np.nan*np.zeros((active_cells.shape[0], nperm))
     FB = np.nan*np.zeros((active_cells.shape[0], nperm))
     FAB = np.nan*np.zeros((active_cells.shape[0], nperm))
 
-    for i in tqdm(range(nperm), desc='Permutations'):
+    perm_iter = range(nperm)
+    if show_progress:
+        perm_iter = tqdm(perm_iter, desc='Permutations')
+    
+    for i in perm_iter:
         np.random.shuffle(Y)
-        a,b,c, FA[:,i], FB[:,i], FAB[:,i] = anova_two_way(A,B,Y)
+        a, b, c, FA[:,i], FB[:,i], FAB[:,i] = anova_two_way(A, B, Y)
 
     pA = np.nan*np.zeros(num_cells)
     pB = np.nan*np.zeros(num_cells)
     pAB = np.nan*np.zeros(num_cells)
 
-    pA[active_cells] = np.sum(np.greater_equal(FA,FA0), axis=1)/nperm
-    pB[active_cells] = np.sum(np.greater_equal(FB,FB0), axis=1)/nperm
-    pAB[active_cells] = np.sum(np.greater_equal(FAB,FAB0), axis=1)/nperm
+    pA[active_cells] = np.sum(np.greater_equal(FA, FA0), axis=1) / nperm
+    pB[active_cells] = np.sum(np.greater_equal(FB, FB0), axis=1) / nperm
+    pAB[active_cells] = np.sum(np.greater_equal(FAB, FAB0), axis=1) / nperm
 
     return pA, pB, pAB
-
 def group_logical_and(group1, group2):
     """
     Performs element-wise logical and
@@ -202,7 +204,7 @@ def compute_anova_neurons(Q, C, Hf, alpha_level, n_permutations, filtered_idx):#
     print('\nRunning permutation ANOVA on real dataset:')
 
     # Find numorosity selective units (anova_cells) using a two-way ANOVA with permutations (permute data and check F distribution for p-value)
-    pN, pC, pNC = anova_two_way_permutations(Q, C, Hf, n_permutations)
+    pN, pC, pNC = anova_two_way_permutations(Q, C, Hf, n_permutations, show_progress=True)
     anova_cells = np.where((pN<alpha_level) & (pNC>alpha_level) & (pC>alpha_level))[0]
     R = Hf[:,anova_cells]
     #save_df['Total segmented'] = [Hf.shape[1]]
@@ -226,32 +228,24 @@ def compute_anova_neurons(Q, C, Hf, alpha_level, n_permutations, filtered_idx):#
 
     return anova_cells, R, chance_lev, anova_df, pref_num, excitatory_or_inhibitory#, save_df
 
-def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations):#, save_df):
-
+def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_progress=True):
     print('\nRunning permutation ANOVA on shuffled dataset:')
 
     Q_S = shuffle(Q, random_state=0)
     C_S = shuffle(C, random_state=0)
 
-    # Find numorosity selective units (anova_cells) using a two-way ANOVA with permutations (permute data and check F distribution for p-value)
-    pN_s, pC_s, pNC_s = anova_two_way_permutations(Q_S, C_S, Hf, n_permutations)
-    anova_cells_shuffled = np.where((pN_s<alpha_level) & (pNC_s>alpha_level) & (pC_s>alpha_level))[0]
-    R_S = Hf[:,anova_cells_shuffled]
-    
-    #save_df['Total segmented'].append(Hf.shape[1])
-    #save_df['Anova selective'].append(R_S.shape[1])
-    #chance_lev = Hf.shape[1]*alpha_level/6
-    #save_df['chance n cells per group'].append(chance_lev)
-    #print('Chance number of cells: '+str(chance_lev))
-    print('Number of anova cells on random shuffled data = %i (%0.2f%%)'%(len(anova_cells_shuffled), 100*len(anova_cells_shuffled)/Hf.shape[1]))
+    # Find numerosity selective units (anova_cells) using a two-way ANOVA with permutations
+    pN_s, pC_s, pNC_s = anova_two_way_permutations(Q_S, C_S, Hf, n_permutations, show_progress)
+    anova_cells_shuffled = np.where((pN_s < alpha_level) & (pNC_s > alpha_level) & (pC_s > alpha_level))[0]
+    R_S = Hf[:, anova_cells_shuffled]
+
+    print('Number of anova cells on random shuffled data = %i (%0.2f%%)' % (len(anova_cells_shuffled), 100 * len(anova_cells_shuffled) / Hf.shape[1]))
 
     pref_num_shuffled, excitatory_or_inhibitory_shuffled = compute_tunings.preferred_numerosity(Q_S, R_S)
-    #for n in range(6):
-    #    save_df[f'Preferring_{n}'].append(sum(pref_num_shuffled==n))
 
-    return anova_cells_shuffled, Q_S, C_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled#, save_df
+    return anova_cells_shuffled, Q_S, C_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled
 
-def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000):
+def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, show_inner_progress=False):
     """
     Runs the original 'compute_shuffled_anova_neurons' function n_reps times
     to estimate the average number of neurons detected by chance.
@@ -261,6 +255,7 @@ def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000):
         alpha_level: Significance level for detecting neurons.
         n_permutations: Number of permutations for ANOVA.
         n_reps: Number of repetitions for shuffling (default: 1000).
+        show_progress: Whether to display a progress bar.
         
     Returns:
         chance_mean: The mean number of ANOVA-selected neurons from shuffled data.
@@ -268,10 +263,10 @@ def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000):
     """
     n_neurons_shuffled = []
 
-    for i in range(n_reps):
-        print(f'Running shuffle {i + 1} out of {n_reps}')
-        # Call the original function, capture the output number of ANOVA cells
-        anova_cells_shuffled, _, _, _, _, _ = compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations)
+    # Use tqdm for a progress bar if show_progress is True
+    for i in tqdm(range(n_reps), desc='Shuffling repetitions'):
+        # Call the original function, capturing the output number of ANOVA cells
+        anova_cells_shuffled, _, _, _, _, _ = compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_inner_progress)
         n_neurons_shuffled.append(len(anova_cells_shuffled))
 
     # Calculate the mean and SEM of the number of significant neurons
@@ -280,7 +275,6 @@ def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000):
 
     print(f"Chance level: {chance_mean} ± {chance_sem}")
     return chance_mean, chance_sem
-
 
 def replot_tuning_curves(output_real, output_shuffled):
     # Extract data from the real output dictionary
