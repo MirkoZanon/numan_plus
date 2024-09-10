@@ -252,7 +252,7 @@ def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_p
 
     return anova_cells_shuffled, Q_S, C_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled
 
-def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, show_progress=False):
+def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, show_inner_progress=False):
     """
     Runs the original 'compute_shuffled_anova_neurons' function n_reps times
     to estimate the average number of neurons detected by chance.
@@ -271,9 +271,9 @@ def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, sh
     n_neurons_shuffled = []
 
     # Use tqdm for a progress bar if show_progress is True
-    for i in tqdm(range(n_reps), desc='Shuffling repetitions', disable=not show_progress):
+    for i in tqdm(range(n_reps), desc='Shuffling repetitions'):
         # Capture the number of ANOVA cells from the shuffled data
-        anova_cells_shuffled, _, _, _, _, _ = compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations)
+        anova_cells_shuffled, _, _, _, _, _ = compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_inner_progress)
         n_neurons_shuffled.append(len(anova_cells_shuffled))
 
     # Calculate the mean and SEM of the number of significant neurons
@@ -282,98 +282,6 @@ def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, sh
 
     print(f"Chance level: {chance_mean:.2f} ± {chance_sem:.2f}")
     return chance_mean, chance_sem
-
-
-def replot_tuning_curves(output_real, output_shuffled):
-    # Extract data from the real output dictionary
-    exc_avg_tuning_abs_0_real = output_real['exc_avg_tuning_abs_0']
-    exc_err_tuning_abs_0_real = output_real['exc_err_tuning_abs_0']
-    exc_avg_tuning_abs_1_real = output_real['exc_avg_tuning_abs_1']
-    exc_err_tuning_abs_1_real = output_real['exc_err_tuning_abs_1']
-    inh_avg_tuning_abs_0_real = output_real['inh_avg_tuning_abs_0']
-    inh_err_tuning_abs_0_real = output_real['inh_err_tuning_abs_0']
-    inh_avg_tuning_abs_1_real = output_real['inh_avg_tuning_abs_1']
-    inh_err_tuning_abs_1_real = output_real['inh_err_tuning_abs_1']
-    distRange_abs_0_real = output_real['distRange_abs_0']
-    distRange_abs_1_real = output_real['distRange_abs_1']
-
-    # Extract data from the shuffled output dictionary
-    exc_avg_tuning_abs_0_shuffled = output_shuffled['exc_avg_tuning_abs_0']
-    exc_err_tuning_abs_0_shuffled = output_shuffled['exc_err_tuning_abs_0']
-    exc_avg_tuning_abs_1_shuffled = output_shuffled['exc_avg_tuning_abs_1']
-    exc_err_tuning_abs_1_shuffled = output_shuffled['exc_err_tuning_abs_1']
-    inh_avg_tuning_abs_0_shuffled = output_shuffled['inh_avg_tuning_abs_0']
-    inh_err_tuning_abs_0_shuffled = output_shuffled['inh_err_tuning_abs_0']
-    inh_avg_tuning_abs_1_shuffled = output_shuffled['inh_avg_tuning_abs_1']
-    inh_err_tuning_abs_1_shuffled = output_shuffled['inh_err_tuning_abs_1']
-    distRange_abs_0_shuffled = output_shuffled['distRange_abs_0']
-    distRange_abs_1_shuffled = output_shuffled['distRange_abs_1']
-
-    # Set up the figure with a number of subplots
-    num_plots = 2  # Initialize number of plots for excitatory neurons
-    if inh_avg_tuning_abs_0_real is not None:  # Check if inhibitory data is available
-        num_plots += 2  # Update number of plots to include inhibitory neurons
-        fig, axs = plt.subplots(2, 2, figsize=(10, 8))  # 2x2 layout
-        axs = axs.flatten()  # Flatten for easier indexing
-    else:
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5))  # 1x2 layout
-
-    # Plot for excitatory neurons - numerical distance = 0
-    axs[0].errorbar(distRange_abs_0_real, exc_avg_tuning_abs_0_real, 
-                    yerr=exc_err_tuning_abs_0_real, 
-                    color='black', label='Real Data', capsize=3)
-    axs[0].errorbar(distRange_abs_0_shuffled, exc_avg_tuning_abs_0_shuffled, 
-                    yerr=exc_err_tuning_abs_0_shuffled, 
-                    color='blue', label='Shuffled Data', capsize=3)
-    axs[0].set_xticks(distRange_abs_0_real)
-    axs[0].set_xlabel('Numerical Distance')
-    axs[0].set_ylabel('Normalized Neural Activity')
-    axs[0].set_title('Numerical Distance Tuning Curve (Excitatory)')
-    axs[0].legend()
-
-    # Plot for excitatory neurons - absolute distance = 1
-    axs[1].errorbar(distRange_abs_1_real, exc_avg_tuning_abs_1_real, 
-                    yerr=exc_err_tuning_abs_1_real, 
-                    color='black', label='Real Data', capsize=3)
-    axs[1].errorbar(distRange_abs_1_shuffled, exc_avg_tuning_abs_1_shuffled, 
-                    yerr=exc_err_tuning_abs_1_shuffled, 
-                    color='blue', label='Shuffled Data', capsize=3)
-    axs[1].set_xticks(distRange_abs_1_real)
-    axs[1].set_xlabel('Absolute Numerical Distance')
-    axs[1].set_ylabel('Normalized Neural Activity')
-    axs[1].set_title('Absolute Numerical Distance Tuning Curve (Excitatory)')
-    axs[1].legend()
-
-    # If inhibitory neurons are provided, create their plots
-    if inh_avg_tuning_abs_0_real is not None:
-        # Plot for inhibitory neurons - numerical distance = 0
-        axs[2].errorbar(distRange_abs_0_real, inh_avg_tuning_abs_0_real, 
-                        yerr=inh_err_tuning_abs_0_real, 
-                        color='red', label='Real Data', capsize=3)
-        axs[2].errorbar(distRange_abs_0_shuffled, inh_avg_tuning_abs_0_shuffled, 
-                        yerr=inh_err_tuning_abs_0_shuffled, 
-                        color='orange', label='Shuffled Data', capsize=3)
-        axs[2].set_xticks(distRange_abs_0_real)
-        axs[2].set_xlabel('Numerical Distance')
-        axs[2].set_ylabel('Normalized Neural Activity')
-        axs[2].set_title('Numerical Distance Tuning Curve (Inhibitory)')
-        axs[2].legend()
-
-        # Plot for inhibitory neurons - absolute distance = 1
-        axs[3].errorbar(distRange_abs_1_real, inh_avg_tuning_abs_1_real, 
-                        yerr=inh_err_tuning_abs_1_real, 
-                        color='red', label='Real Data', capsize=3)
-        axs[3].errorbar(distRange_abs_1_shuffled, inh_avg_tuning_abs_1_shuffled, 
-                        yerr=inh_err_tuning_abs_1_shuffled, 
-                        color='orange', label='Shuffled Data', capsize=3)
-        axs[3].set_xticks(distRange_abs_1_real)
-        axs[3].set_xlabel('Absolute Numerical Distance')
-        axs[3].set_ylabel('Normalized Neural Activity')
-        axs[3].set_title('Absolute Numerical Distance Tuning Curve (Inhibitory)')
-        axs[3].legend()
-
-    plt.tight_layout()
-    plt.show()
 
 def plot_anova_results(Q, R, Q_S, R_S, brain_region_tag, chance_mean, chance_error, n_numerosities, colors_list):
 
@@ -389,7 +297,7 @@ def plot_anova_results(Q, R, Q_S, R_S, brain_region_tag, chance_mean, chance_err
     compute_tunings.plot_selective_cells_histo(
         pref_num, n_numerosities, colors_list, 
         excitatory_or_inhibitory=excitatory_or_inhibitory, 
-        chance_lev=chance_mean, 
+        chance_mean=chance_mean, 
         chance_error=chance_error, 
         save_path=save_path, 
         save_name=f'{brain_region_tag}_numberneurons_percentages'
