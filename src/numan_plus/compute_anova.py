@@ -237,7 +237,7 @@ def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_p
     C_S = shuffle(C, random_state=0)
 
     # Perform two-way ANOVA with permutations
-    pN_s, pC_s, pNC_s = anova_two_way_permutations(Q_S, C_S, Hf, n_permutations, show_progress)
+    pN_s, pC_s, pNC_s = compute_anova.anova_two_way_permutations(Q_S, C_S, Hf, n_permutations, show_progress)
     
     # Identify selective units based on p-values
     anova_cells_shuffled = np.where((pN_s < alpha_level) & (pNC_s > alpha_level) & (pC_s > alpha_level))[0]
@@ -253,90 +253,58 @@ def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_p
     return anova_cells_shuffled, Q_S, C_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled
 
 def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, show_inner_progress=False):
-    """
-    Runs the original 'compute_shuffled_anova_neurons' function n_reps times
-    to estimate the average number of neurons detected by chance.
-    
-    Args:
-        Q, C, Hf: Input data for ANOVA.
-        alpha_level: Significance level for detecting neurons.
-        n_permutations: Number of permutations for ANOVA.
-        n_reps: Number of repetitions for shuffling (default: 1000).
-        show_progress: Whether to display a progress bar.
-        
-    Returns:
-        chance_mean: The mean number of ANOVA-selected neurons from shuffled data.
-        chance_sem: The standard error of the mean (SEM).
-    """
-    n_neurons_shuffled = []
+    n_numerosities = 6  # Define the number of preferred numerosity levels
+    n_neurons_shuffled_excitatory = np.zeros((n_numerosities, n_reps))
+    n_neurons_shuffled_inhibitory = np.zeros((n_numerosities, n_reps))
+    n_neurons_shuffled_total = np.zeros((n_numerosities, n_reps))
 
-    # Use tqdm for a progress bar if show_progress is True
     for i in tqdm(range(n_reps), desc='Shuffling repetitions'):
-        # Capture the number of ANOVA cells from the shuffled data
-        anova_cells_shuffled, _, _, _, _, _ = compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_inner_progress)
-        n_neurons_shuffled.append(len(anova_cells_shuffled))
+        anova_cells_shuffled, _, _, R_S, pref_num_shuffled, excitatory_or_inhibitory_S = compute_shuffled_anova_neurons(
+            Q, C, Hf, alpha_level, n_permutations, show_inner_progress)
 
-    # Calculate the mean and SEM of the number of significant neurons
-    chance_mean = np.mean(n_neurons_shuffled)
-    chance_sem = np.std(n_neurons_shuffled) / np.sqrt(n_reps)
+        # Get the types of selected neurons directly
+        selected_neuron_types = excitatory_or_inhibitory_S
+        selected_preferred_numerosities = pref_num_shuffled
 
-    print(f"Chance level: {chance_mean:.2f} ± {chance_sem:.2f}")
-    return chance_mean, chance_sem
+        # Count excitatory and inhibitory neurons for each preferred numerosity level
+        for q in range(n_numerosities):
+            count_exc = np.sum(selected_preferred_numerosities[selected_neuron_types == 'excitatory'] == q)
+            count_inh = np.sum(selected_preferred_numerosities[selected_neuron_types == 'inhibitory'] == q)
+            count_total = np.sum(selected_preferred_numerosities == q)
 
-def plot_anova_results(Q, R, Q_S, R_S, brain_region_tag, chance_mean, chance_error, n_numerosities, colors_list):
+            n_neurons_shuffled_excitatory[q, i] = count_exc
+            n_neurons_shuffled_inhibitory[q, i] = count_inh
+            n_neurons_shuffled_total[q, i] = count_total
 
-    # Create new folder to save ANOVA graphs
-    os.makedirs('./anova_figures', exist_ok=True)
-    save_path = './anova_figures'
+    # Calculate the mean and SEM for both neuron types and total
+    chance_means_excitatory = np.mean(n_neurons_shuffled_excitatory, axis=1)
+    chance_sems_excitatory = np.std(n_neurons_shuffled_excitatory, axis=1) / np.sqrt(n_reps)
 
-    # Real data ######################################################################
-    print('\033[1m\nREAL DATA\033[0m\n')
+    chance_means_inhibitory = np.mean(n_neurons_shuffled_inhibitory, axis=1)
+    chance_sems_inhibitory = np.std(n_neurons_shuffled_inhibitory, axis=1) / np.sqrt(n_reps)
 
-    pref_num, excitatory_or_inhibitory = compute_tunings.preferred_numerosity(Q, R)
-    # Modify histogram plot using new chance level (chance_mean) and error (chance_error)
-    compute_tunings.plot_selective_cells_histo(
-        pref_num, n_numerosities, colors_list, 
-        excitatory_or_inhibitory=excitatory_or_inhibitory, 
-        chance_mean=chance_mean, 
-        chance_error=chance_error, 
-        save_path=save_path, 
-        save_name=f'{brain_region_tag}_numberneurons_percentages'
-    )
+    chance_means_total = np.mean(n_neurons_shuffled_total, axis=1)
+    chance_sems_total = np.std(n_neurons_shuffled_total, axis=1) / np.sqrt(n_reps)
+
+    chance_means = {
+        'excitatory': chance_means_excitatory,
+        'inhibitory': chance_means_inhibitory,
+        'total': chance_means_total
+    }
     
-    tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh = compute_tunings.get_tuning_matrix(
-        Q, R, pref_num, excitatory_or_inhibitory, n_numerosities
-    )
-    
-    compute_tunings.plot_tuning_curves(
-        tuning_mat_exc, tuning_err_exc, colors_list, 
-        tuning_mat_inh, tuning_err_inh, excitatory_or_inhibitory
-    )
-    output = compute_tunings.plot_abs_dist_tunings(
-        tuning_mat_exc, n_numerosities, tuning_mat_inh, 
-        save_file=None, print_stats=True
-    )
-    
-    # Shuffled data #####################################################################
-    print('\033[1m\nSHUFFLED DATA\033[0m\n')
+    chance_sems = {
+        'excitatory': chance_sems_excitatory,
+        'inhibitory': chance_sems_inhibitory,
+        'total': chance_sems_total
+    }
 
-    pref_num_shuffled, excitatory_or_inhibitory_shuffled = compute_tunings.preferred_numerosity(Q_S, R_S)
-    
-    tuning_mat_exc_shuffled, tuning_err_exc_shuffled, tuning_mat_inh_shuffled, tuning_err_inh_shuffled = compute_tunings.get_tuning_matrix(
-        Q_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled, n_numerosities
-    )
+    for q in range(n_numerosities):
+        print(f"Preferred Numerosity {q}:")
+        print(f"  Excitatory chance level: {int(round(chance_means_excitatory[q]))} ± {int(round(chance_sems_excitatory[q]))}")
+        print(f"  Inhibitory chance level: {int(round(chance_means_inhibitory[q]))} ± {int(round(chance_sems_inhibitory[q]))}")
+        print(f"  Total chance level: {int(round(chance_means_total[q]))} ± {int(round(chance_sems_total[q]))}")
 
-    compute_tunings.plot_tuning_curves(
-        tuning_mat_exc_shuffled, tuning_err_exc_shuffled, colors_list, 
-        tuning_mat_inh_shuffled, tuning_err_inh_shuffled, excitatory_or_inhibitory_shuffled
-    )
-    output_shuffled = compute_tunings.plot_abs_dist_tunings(
-        tuning_mat_exc_shuffled, n_numerosities, tuning_mat_inh_shuffled, 
-        save_file=None, print_stats=False
-    )
-
-    # Plot real and shuffled tuning curves together
-    replot_tuning_curves(output, output_shuffled)
-
+    return chance_means, chance_sems
 
 # CREATE ANOVA CELLS TIF VOLUMES TO VISUALIZE 3D CELLS DISTRIBUTION
 def save_anova_mask(spots, spot_tag, region_tag, vol_size, resolution):
@@ -395,49 +363,3 @@ def save_anova_spots(spots, anova_df, spot_tag):
                     rewrite=True)
 
     spots.to_json(f"./spots/signals/spots_{spot_tag}.json")
-
-
-
-def plot_tunings(Q, R, Q_S, R_S, brain_region_tag, chance_mean, chance_error, n_numerosities, colors_list, save_file=None, print_stats=True, plot_figures=True):
-
-    # Create new folder to save ANOVA graphs
-    os.makedirs('./anova_figures', exist_ok=True)
-    save_path = './anova_figures'
-
-    # Real data ######################################################################
-    print('\033[1m\nREAL DATA\033[0m\n')
-
-    pref_num, excitatory_or_inhibitory = compute_tunings.preferred_numerosity(Q, R)
- 
-    tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh = compute_tunings.get_tuning_matrix(
-        Q, R, pref_num, excitatory_or_inhibitory, n_numerosities
-    )
-    
-    compute_tunings.plot_tuning_curves(
-        tuning_mat_exc, tuning_err_exc, colors_list, 
-        tuning_mat_inh, tuning_err_inh, excitatory_or_inhibitory
-    )
-    output = compute_tunings.plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh, save_file, print_stats, plot_figures)
-
-    
-    # Shuffled data #####################################################################
-    print('\033[1m\nSHUFFLED DATA\033[0m\n')
-
-    pref_num_shuffled, excitatory_or_inhibitory_shuffled = compute_tunings.preferred_numerosity(Q_S, R_S)
-    
-    tuning_mat_exc_shuffled, tuning_err_exc_shuffled, tuning_mat_inh_shuffled, tuning_err_inh_shuffled = compute_tunings.get_tuning_matrix(
-        Q_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled, n_numerosities
-    )
-
-    compute_tunings.plot_tuning_curves(
-        tuning_mat_exc_shuffled, tuning_err_exc_shuffled, colors_list, 
-        tuning_mat_inh_shuffled, tuning_err_inh_shuffled, excitatory_or_inhibitory_shuffled
-    )
-    output_shuffled = compute_tunings.plot_abs_dist_tunings(
-        tuning_mat_exc_shuffled, n_numerosities, tuning_mat_inh_shuffled, 
-        save_file=None, print_stats=False, plot_figures=False
-    )
-
-    # Plot real and shuffled tuning curves together
-    print('\nOVERALL TUNINGS BASED ON NUMERICAL DISTANCE')
-    compute_tunings.replot_tuning_curves(output, output_shuffled)

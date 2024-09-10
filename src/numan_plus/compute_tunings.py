@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from statistics import mean, stdev, sqrt
 import scipy.stats as stats
+import os
 
 def average_tuning_curves(Q, H):
     #Q: array of type of stimulus (trials,)
@@ -75,105 +76,81 @@ def get_tuning_matrix(Q, R, pref_num, excitatory_or_inhibitory, n_numerosities):
 
     return tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh
 
-def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_mean=None, chance_error=None, save_path=None, save_name=None):
+def plot_bar_with_error(ax, Qrange, hist, chance_means, chance_errors, title, xlabel, ylabel, colors_list):
+    """Helper function to plot bar chart with error shading and chance means as horizontal bars."""
+    perc = hist / np.sum(hist)
+    ax.bar(Qrange, hist, width=0.9, color=colors_list, alpha=0.7)  # Added alpha for transparency
+
+    # Update text positioning and formatting
+    for x, y, p in zip(Qrange, hist, perc):
+        ax.text(x - 0.4, 0, str(y) + '\n' + str(round(p * 100, 1)) + '%', ha='left', va='bottom', fontsize=9)  # Positioning text inside the canvas
+
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+    if chance_means is not None and chance_errors is not None:
+        for q in Qrange:
+            # Draw horizontal line for chance mean
+            ax.hlines(y=chance_means[q], xmin=q - 0.4, xmax=q + 0.4, color='black', linewidth=2, label='Chance Mean' if q == 0 else "")
+            # Draw error bar as horizontal line above the chance mean
+            ax.hlines(y=chance_means[q] - chance_errors[q], xmin=q - 0.4, xmax=q + 0.4, color='black', linestyle='--', linewidth=1)
+            ax.hlines(y=chance_means[q] + chance_errors[q], xmin=q - 0.4, xmax=q + 0.4, color='black', linestyle='--', linewidth=1)
+
+    plt.xticks(Qrange)
+
+
+def plot_selective_cells_histo(pref_num, n_numerosities, colors_list, excitatory_or_inhibitory=None, chance_means=None, chance_errors=None, save_path=None, save_name=None):
+    """Main function to plot selective cells histogram."""
     Qrange = np.arange(n_numerosities)
-    
+
     if excitatory_or_inhibitory is None:
         # Case for all neurons
         hist = [np.sum(pref_num == q) for q in Qrange]
-        perc = hist / np.sum(hist)
-
-        plt.figure(figsize=(4, 4))
-        plt.bar(Qrange, hist, width=0.8, color=colors_list)
-
-        for x, y, p in zip(Qrange, hist, perc):
-            plt.text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
-
-        # Plot the chance levels with error bars
-        if not (chance_mean is None) and not (chance_error is None):
-            plt.errorbar(Qrange, chance_mean, yerr=chance_error, fmt='k--', capsize=5, label='Chance Level')
-            plt.legend()
-
-        plt.xticks(np.arange(n_numerosities), np.arange(n_numerosities).tolist())
-        plt.xlabel('Preferred Numerosity')
-        plt.ylabel('Number of cells')
-        plt.title(save_name)
-
-        # Save figure
-        if not (save_name is None):
-            if not (save_path is None):
-                plt.savefig(f'{save_path}/{save_name}.svg')
-                plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
-            else:
-                plt.savefig(f'{save_name}.svg')
-                plt.savefig(f'{save_name}.png', dpi=900)
-
-        plt.show()
-
+        fig, ax = plt.subplots(figsize=(4, 4))
+        plot_bar_with_error(ax, Qrange, hist, chance_means['total'], chance_errors['total'], save_name, 'Preferred Numerosity', 'Number of cells', colors_list)
+        plt.xticks(Qrange)
+        plt.legend()
     else:
         # Case with excitatory and inhibitory neurons
         fig, axes = plt.subplots(1, 3, figsize=(12, 4))
 
-        # Excitatory neurons histogram
+        # Excitatory neurons
         excitatory_indices = excitatory_or_inhibitory == 'excitatory'
         hist_exc = [np.sum(pref_num[excitatory_indices] == q) for q in Qrange]
-        perc_exc = hist_exc / np.sum(hist_exc)
+        plot_bar_with_error(axes[0], Qrange, hist_exc, 
+                            chance_means['excitatory'], 
+                            chance_errors['excitatory'], 
+                            'Excitatory Neurons', 'Preferred Numerosity', 'Number of cells', colors_list)
 
-        axes[0].bar(Qrange, hist_exc, width=0.8, color=colors_list)
-        for x, y, p in zip(Qrange, hist_exc, perc_exc):
-            axes[0].text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
-
-        axes[0].set_title('Excitatory Neurons')
-        axes[0].set_xlabel('Preferred Numerosity')
-        axes[0].set_ylabel('Number of cells')
-
-        if not (chance_mean is None) and not (chance_error is None):
-            axes[0].errorbar(Qrange, chance_mean, yerr=chance_error, fmt='k--', capsize=5)
-
-        # Inhibitory neurons histogram
+        # Inhibitory neurons
         inhibitory_indices = excitatory_or_inhibitory == 'inhibitory'
         hist_inh = [np.sum(pref_num[inhibitory_indices] == q) for q in Qrange]
-        perc_inh = hist_inh / np.sum(hist_inh)
+        plot_bar_with_error(axes[1], Qrange, hist_inh, 
+                            chance_means['inhibitory'], 
+                            chance_errors['inhibitory'], 
+                            'Inhibitory Neurons', 'Preferred Numerosity', 'Number of cells', colors_list)
 
-        axes[1].bar(Qrange, hist_inh, width=0.8, color=colors_list)
-        for x, y, p in zip(Qrange, hist_inh, perc_inh):
-            axes[1].text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
-
-        axes[1].set_title('Inhibitory Neurons')
-        axes[1].set_xlabel('Preferred Numerosity')
-        axes[1].set_ylabel('Number of cells')
-
-        if not (chance_mean is None) and not (chance_error is None):
-            axes[1].errorbar(Qrange, chance_mean, yerr=chance_error, fmt='k--', capsize=5)
-
-        # All neurons histogram
+        # All neurons
         hist = [np.sum(pref_num == q) for q in Qrange]
-        perc = hist / np.sum(hist)
-
-        axes[2].bar(Qrange, hist, width=0.8, color=colors_list)
-        for x, y, p in zip(Qrange, hist, perc):
-            axes[2].text(x, y, str(y) + '\n' + str(round(p * 100, 1)) + '%')
-
-        axes[2].set_title('All Neurons')
-        axes[2].set_xlabel('Preferred Numerosity')
-        axes[2].set_ylabel('Number of cells')
-
-        if not (chance_mean is None) and not (chance_error is None):
-            axes[2].errorbar(Qrange, chance_mean, yerr=chance_error, fmt='k--', capsize=5)
+        plot_bar_with_error(axes[2], Qrange, hist, 
+                            chance_means['total'], 
+                            chance_errors['total'], 
+                            'All Neurons', 'Preferred Numerosity', 'Number of cells', colors_list)
 
         plt.tight_layout()
 
-        # Save figure
-        if not (save_name is None):
-            if not (save_path is None):
-                plt.savefig(f'{save_path}/{save_name}.svg')
-                plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
-            else:
-                plt.savefig(f'{save_name}.svg')
-                plt.savefig(f'{save_name}.png', dpi=900)
+    # Save figure
+    if save_name is not None:
+        if save_path is not None:
+            plt.savefig(f'{save_path}/{save_name}.svg')
+            plt.savefig(f'{save_path}/{save_name}.png', dpi=900)
+        else:
+            plt.savefig(f'{save_name}.svg')
+            plt.savefig(f'{save_name}.png', dpi=900)
 
-        plt.show()
-
+    plt.show()
+    
 def plot_tuning_curves(tuning_mat_exc, tuning_err_exc,  colors=None, tuning_mat_inh=None, tuning_err_inh=None, excitatory_or_inhibitory=None):
     # Number of types of stimuli (should be the same for both matrices)
     n_stimuli = tuning_mat_exc.shape[0]  # This should match tuning_mat_inh if provided
@@ -479,3 +456,48 @@ def replot_tuning_curves(output_real, output_shuffled):
 
     plt.tight_layout()
     plt.show()
+
+
+def plot_tunings(Q, R, Q_S, R_S, brain_region_tag, chance_mean, chance_error, n_numerosities, colors_list, save_file=None, print_stats=True, plot_figures=True):
+
+    # Create new folder to save ANOVA graphs
+    os.makedirs('./anova_figures', exist_ok=True)
+    save_path = './anova_figures'
+
+    # Real data ######################################################################
+    print('\033[1m\nREAL DATA\033[0m\n')
+
+    pref_num, excitatory_or_inhibitory = preferred_numerosity(Q, R)
+ 
+    tuning_mat_exc, tuning_err_exc, tuning_mat_inh, tuning_err_inh = get_tuning_matrix(
+        Q, R, pref_num, excitatory_or_inhibitory, n_numerosities
+    )
+    
+    plot_tuning_curves(
+        tuning_mat_exc, tuning_err_exc, colors_list, 
+        tuning_mat_inh, tuning_err_inh, excitatory_or_inhibitory
+    )
+    output = plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh, save_file, print_stats, plot_figures)
+
+    
+    # Shuffled data #####################################################################
+    print('\033[1m\nSHUFFLED DATA\033[0m\n')
+
+    pref_num_shuffled, excitatory_or_inhibitory_shuffled = preferred_numerosity(Q_S, R_S)
+    
+    tuning_mat_exc_shuffled, tuning_err_exc_shuffled, tuning_mat_inh_shuffled, tuning_err_inh_shuffled = get_tuning_matrix(
+        Q_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled, n_numerosities
+    )
+
+    plot_tuning_curves(
+        tuning_mat_exc_shuffled, tuning_err_exc_shuffled, colors_list, 
+        tuning_mat_inh_shuffled, tuning_err_inh_shuffled, excitatory_or_inhibitory_shuffled
+    )
+    output_shuffled = plot_abs_dist_tunings(
+        tuning_mat_exc_shuffled, n_numerosities, tuning_mat_inh_shuffled, 
+        save_file=None, print_stats=False, plot_figures=False
+    )
+
+    # Plot real and shuffled tuning curves together
+    print('\nOVERALL TUNINGS BASED ON NUMERICAL DISTANCE')
+    replot_tuning_curves(output, output_shuffled)
