@@ -411,28 +411,28 @@ def plot_abs_dist_tunings(tuning_mat_exc, n_numerosities, tuning_mat_inh=None, s
 
 def replot_tuning_curves(output_real, output_shuffled, save_name=None):
     # Extract data from the real output dictionary
-    exc_avg_tuning_abs_0_real = output_real['exc_avg_tuning_abs_0']
-    exc_err_tuning_abs_0_real = output_real['exc_err_tuning_abs_0']
-    exc_avg_tuning_abs_1_real = output_real['exc_avg_tuning_abs_1']
-    exc_err_tuning_abs_1_real = output_real['exc_err_tuning_abs_1']
-    inh_avg_tuning_abs_0_real = output_real['inh_avg_tuning_abs_0']
-    inh_err_tuning_abs_0_real = output_real['inh_err_tuning_abs_0']
-    inh_avg_tuning_abs_1_real = output_real['inh_avg_tuning_abs_1']
-    inh_err_tuning_abs_1_real = output_real['inh_err_tuning_abs_1']
-    distRange_abs_0_real = output_real['distRange_abs_0']
-    distRange_abs_1_real = output_real['distRange_abs_1']
+    exc_avg_tuning_abs_0_real = output_real.get('exc_avg_tuning_abs_0')
+    exc_err_tuning_abs_0_real = output_real.get('exc_err_tuning_abs_0')
+    exc_avg_tuning_abs_1_real = output_real.get('exc_avg_tuning_abs_1')
+    exc_err_tuning_abs_1_real = output_real.get('exc_err_tuning_abs_1')
+    inh_avg_tuning_abs_0_real = output_real.get('inh_avg_tuning_abs_0')
+    inh_err_tuning_abs_0_real = output_real.get('inh_err_tuning_abs_0')
+    inh_avg_tuning_abs_1_real = output_real.get('inh_avg_tuning_abs_1')
+    inh_err_tuning_abs_1_real = output_real.get('inh_err_tuning_abs_1')
+    distRange_abs_0_real = output_real.get('distRange_abs_0')
+    distRange_abs_1_real = output_real.get('distRange_abs_1')
 
     # Extract data from the shuffled output dictionary
-    exc_avg_tuning_abs_0_shuffled = output_shuffled['exc_avg_tuning_abs_0']
-    exc_err_tuning_abs_0_shuffled = output_shuffled['exc_err_tuning_abs_0']
-    exc_avg_tuning_abs_1_shuffled = output_shuffled['exc_avg_tuning_abs_1']
-    exc_err_tuning_abs_1_shuffled = output_shuffled['exc_err_tuning_abs_1']
-    inh_avg_tuning_abs_0_shuffled = output_shuffled['inh_avg_tuning_abs_0']
-    inh_err_tuning_abs_0_shuffled = output_shuffled['inh_err_tuning_abs_0']
-    inh_avg_tuning_abs_1_shuffled = output_shuffled['inh_avg_tuning_abs_1']
-    inh_err_tuning_abs_1_shuffled = output_shuffled['inh_err_tuning_abs_1']
-    distRange_abs_0_shuffled = output_shuffled['distRange_abs_0']
-    distRange_abs_1_shuffled = output_shuffled['distRange_abs_1']
+    exc_avg_tuning_abs_0_shuffled = output_shuffled.get('exc_avg_tuning_abs_0')
+    exc_err_tuning_abs_0_shuffled = output_shuffled.get('exc_err_tuning_abs_0')
+    exc_avg_tuning_abs_1_shuffled = output_shuffled.get('exc_avg_tuning_abs_1')
+    exc_err_tuning_abs_1_shuffled = output_shuffled.get('exc_err_tuning_abs_1')
+    inh_avg_tuning_abs_0_shuffled = output_shuffled.get('inh_avg_tuning_abs_0')
+    inh_err_tuning_abs_0_shuffled = output_shuffled.get('inh_err_tuning_abs_0')
+    inh_avg_tuning_abs_1_shuffled = output_shuffled.get('inh_avg_tuning_abs_1')
+    inh_err_tuning_abs_1_shuffled = output_shuffled.get('inh_err_tuning_abs_1')
+    distRange_abs_0_shuffled = output_shuffled.get('distRange_abs_0')
+    distRange_abs_1_shuffled = output_shuffled.get('distRange_abs_1')
 
     # Set up the figure with a number of subplots
     num_plots = 2  # Initialize number of plots for excitatory neurons
@@ -444,53 +444,62 @@ def replot_tuning_curves(output_real, output_shuffled, save_name=None):
         fig, axs = plt.subplots(1, 2, figsize=(10, 5))  # 1x2 layout
 
     # Plot for excitatory neurons - numerical distance = 0
-    axs[0].errorbar(distRange_abs_0_real, exc_avg_tuning_abs_0_real, 
-                    yerr=exc_err_tuning_abs_0_real, 
-                    color='blue', label='Real Data', capsize=3)
-    axs[0].errorbar(distRange_abs_0_shuffled, exc_avg_tuning_abs_0_shuffled, 
-                    yerr=exc_err_tuning_abs_0_shuffled, 
-                    color='cyan', label='Shuffled Data', capsize=3)
-    axs[0].set_xticks(distRange_abs_0_real)
-    axs[0].set_xlabel('Numerical Distance')
-    axs[0].set_ylabel('Normalized Neural Activity')
-    axs[0].set_title('Numerical Distance Tuning Curve (Excitatory)')
-    axs[0].legend()
+    if distRange_abs_0_real is not None:
+        if exc_avg_tuning_abs_0_real is not None and exc_err_tuning_abs_0_real is not None:
+            axs[0].errorbar(distRange_abs_0_real, exc_avg_tuning_abs_0_real, 
+                            yerr=exc_err_tuning_abs_0_real, 
+                            color='blue', label='Real Data', capsize=3)
+        if exc_avg_tuning_abs_0_shuffled is not None and exc_err_tuning_abs_0_shuffled is not None:
+            axs[0].errorbar(distRange_abs_0_shuffled, exc_avg_tuning_abs_0_shuffled, 
+                            yerr=exc_err_tuning_abs_0_shuffled, 
+                            color='cyan', label='Shuffled Data', capsize=3)
+        axs[0].set_xticks(distRange_abs_0_real)
+        axs[0].set_xlabel('Numerical Distance')
+        axs[0].set_ylabel('Normalized Neural Activity')
+        axs[0].set_title('Numerical Distance Tuning Curve (Excitatory)')
+        axs[0].legend()
 
     # Plot for excitatory neurons - absolute distance = 1
-    axs[1].errorbar(distRange_abs_1_real, exc_avg_tuning_abs_1_real, 
-                    yerr=exc_err_tuning_abs_1_real, 
-                    color='blue', label='Real Data', capsize=3)
-    axs[1].errorbar(distRange_abs_1_shuffled, exc_avg_tuning_abs_1_shuffled, 
-                    yerr=exc_err_tuning_abs_1_shuffled, 
-                    color='cyan', label='Shuffled Data', capsize=3)
-    axs[1].set_xticks(distRange_abs_1_real)
-    axs[1].set_xlabel('Absolute Numerical Distance')
-    axs[1].set_ylabel('Normalized Neural Activity')
-    axs[1].set_title('Absolute Numerical Distance Tuning Curve (Excitatory)')
-    axs[1].legend()
+    if distRange_abs_1_real is not None:
+        if exc_avg_tuning_abs_1_real is not None and exc_err_tuning_abs_1_real is not None:
+            axs[1].errorbar(distRange_abs_1_real, exc_avg_tuning_abs_1_real, 
+                            yerr=exc_err_tuning_abs_1_real, 
+                            color='blue', label='Real Data', capsize=3)
+        if exc_avg_tuning_abs_1_shuffled is not None and exc_err_tuning_abs_1_shuffled is not None:
+            axs[1].errorbar(distRange_abs_1_shuffled, exc_avg_tuning_abs_1_shuffled, 
+                            yerr=exc_err_tuning_abs_1_shuffled, 
+                            color='cyan', label='Shuffled Data', capsize=3)
+        axs[1].set_xticks(distRange_abs_1_real)
+        axs[1].set_xlabel('Absolute Numerical Distance')
+        axs[1].set_ylabel('Normalized Neural Activity')
+        axs[1].set_title('Absolute Numerical Distance Tuning Curve (Excitatory)')
+        axs[1].legend()
 
     # If inhibitory neurons are provided, create their plots
-    if inh_avg_tuning_abs_0_real is not None:
-        # Plot for inhibitory neurons - numerical distance = 0
-        axs[2].errorbar(distRange_abs_0_real, inh_avg_tuning_abs_0_real, 
-                        yerr=inh_err_tuning_abs_0_real, 
-                        color='red', label='Real Data', capsize=3)
-        axs[2].errorbar(distRange_abs_0_shuffled, inh_avg_tuning_abs_0_shuffled, 
-                        yerr=inh_err_tuning_abs_0_shuffled, 
-                        color='orange', label='Shuffled Data', capsize=3)
+    if inh_avg_tuning_abs_0_real is not None and distRange_abs_0_real is not None:
+        if inh_avg_tuning_abs_0_real is not None and inh_err_tuning_abs_0_real is not None:
+            axs[2].errorbar(distRange_abs_0_real, inh_avg_tuning_abs_0_real, 
+                            yerr=inh_err_tuning_abs_0_real, 
+                            color='red', label='Real Data', capsize=3)
+        if inh_avg_tuning_abs_0_shuffled is not None and inh_err_tuning_abs_0_shuffled is not None:
+            axs[2].errorbar(distRange_abs_0_shuffled, inh_avg_tuning_abs_0_shuffled, 
+                            yerr=inh_err_tuning_abs_0_shuffled, 
+                            color='orange', label='Shuffled Data', capsize=3)
         axs[2].set_xticks(distRange_abs_0_real)
         axs[2].set_xlabel('Numerical Distance')
         axs[2].set_ylabel('Normalized Neural Activity')
         axs[2].set_title('Numerical Distance Tuning Curve (Inhibitory)')
         axs[2].legend()
 
-        # Plot for inhibitory neurons - absolute distance = 1
-        axs[3].errorbar(distRange_abs_1_real, inh_avg_tuning_abs_1_real, 
-                        yerr=inh_err_tuning_abs_1_real, 
-                        color='red', label='Real Data', capsize=3)
-        axs[3].errorbar(distRange_abs_1_shuffled, inh_avg_tuning_abs_1_shuffled, 
-                        yerr=inh_err_tuning_abs_1_shuffled, 
-                        color='orange', label='Shuffled Data', capsize=3)
+    if inh_avg_tuning_abs_1_real is not None and distRange_abs_1_real is not None:
+        if inh_avg_tuning_abs_1_real is not None and inh_err_tuning_abs_1_real is not None:
+            axs[3].errorbar(distRange_abs_1_real, inh_avg_tuning_abs_1_real, 
+                            yerr=inh_err_tuning_abs_1_real, 
+                            color='red', label='Real Data', capsize=3)
+        if inh_avg_tuning_abs_1_shuffled is not None and inh_err_tuning_abs_1_shuffled is not None:
+            axs[3].errorbar(distRange_abs_1_shuffled, inh_avg_tuning_abs_1_shuffled, 
+                            yerr=inh_err_tuning_abs_1_shuffled, 
+                            color='orange', label='Shuffled Data', capsize=3)
         axs[3].set_xticks(distRange_abs_1_real)
         axs[3].set_xlabel('Absolute Numerical Distance')
         axs[3].set_ylabel('Normalized Neural Activity')
@@ -500,7 +509,6 @@ def replot_tuning_curves(output_real, output_shuffled, save_name=None):
     plt.tight_layout()
 
     # Save figure if save_name is provided
-    # Save figure
     if save_name:
         try:
             if save_name.endswith('.svg'):
@@ -510,7 +518,6 @@ def replot_tuning_curves(output_real, output_shuffled, save_name=None):
             else:
                 print("Error: save_name should end with either '.svg' or '.png'")
                 return
-            #print(f"File saved successfully at: {os.path.abspath(save_name)}")
         except Exception as e:
             print(f"Error while saving file: {e}")
 
