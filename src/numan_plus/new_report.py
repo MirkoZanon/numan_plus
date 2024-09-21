@@ -94,7 +94,7 @@ def create_signal_pdf(project, experiment, spot_tag, group_tag, region_tag, savi
                                 saving_folder = saving_folder)
  
 
-def create_signal_pdf_new(reps_mean, reps_sem, coordinates, baseline_length, post_stim_length, resolution, output_pdf="calcium_signals_with_errorbars.pdf", neurons_per_page=5, neuron_filter=None, classify_neurons=False):
+def create_signal_pdf_new(reps_mean, reps_sem, coordinates, baseline_length, post_stim_length, resolution, n_numerosities, colors_list, output_pdf="calcium_signals_with_errorbars.pdf", neurons_per_page=5, neuron_filter=None, classify_neurons=False):
     """
     Creates a PDF with calcium signal (dF/F0) plots and error bars, with progress bar indication.
     
@@ -121,10 +121,10 @@ def create_signal_pdf_new(reps_mean, reps_sem, coordinates, baseline_length, pos
     selected_coordinates = [coordinates[idx] for idx in selected_neurons]
 
     # Create x-ticks for the time points
-    x_ticks = np.linspace(-baseline_length, post_stim_length, 12).astype(int)
+    x_ticks = np.linspace(-baseline_length, post_stim_length, baseline_length+post_stim_length+1).astype(int)
 
     # Define background colors for classification with low alpha
-    colors = ['red', 'gold', 'green', 'blue', 'purple', 'cyan']  ### change here colors, also the length of list if you've different n of stimulus types
+    colors = colors_list  ### change here colors, also the length of list if you've different n of stimulus types
     alpha = 0.2  # Set the transparency level
 
     # Initialize progress bar
@@ -134,7 +134,7 @@ def create_signal_pdf_new(reps_mean, reps_sem, coordinates, baseline_length, pos
         with PdfPages(output_pdf) as pdf:
             for i in range(0, len(selected_neurons), neurons_per_page):
                 # Set up the figure for each page
-                fig, axes = plt.subplots(neurons_per_page, 6, figsize=(15, neurons_per_page * 3)) ### change here 6 if you have different number of stimulus types (numerosities)
+                fig, axes = plt.subplots(neurons_per_page, n_numerosities, figsize=(15, neurons_per_page * 3)) ### change here 6 if you have different number of stimulus types (numerosities)
                 fig.subplots_adjust(hspace=0.6, wspace=0.3)
 
                 # Iterate over the neurons on the current page
@@ -151,7 +151,7 @@ def create_signal_pdf_new(reps_mean, reps_sem, coordinates, baseline_length, pos
                     # Neuron classification
                     if classify_neurons:
                         # Calculate the absolute average signal in the [baseline_length:baseline_length+3] window
-                        averages = [np.abs(np.mean(reps_mean[stim_idx, baseline_length:baseline_length + 3, neuron_idx])) for stim_idx in range(6)] ### change here 6 if you have different number of stimulus types (numerosities)
+                        averages = [np.abs(np.mean(reps_mean[stim_idx, baseline_length:baseline_length + 3, neuron_idx])) for stim_idx in range(n_numerosities)] ### change here 6 if you have different number of stimulus types (numerosities)
                         preferred_stimulus_idx = np.argmax(averages)
 
                         # Check if the neuron is excitatory or inhibitory for the preferred stimulus
@@ -166,7 +166,7 @@ def create_signal_pdf_new(reps_mean, reps_sem, coordinates, baseline_length, pos
                     # Center the title above the third subplot (column 3)
                     axes[j, 2].set_title(neuron_title, fontsize=14, fontweight='bold', pad=20)  # Center title in third column
 
-                    for stim_idx in range(6):  # Iterate over each stimulus type
+                    for stim_idx in range(n_numerosities):  # Iterate over each stimulus type
                         ax = axes[j, stim_idx] if neurons_per_page > 1 else axes[stim_idx]
 
                         # If neuron classification is enabled, highlight the preferred stimulus with low alpha
@@ -175,13 +175,13 @@ def create_signal_pdf_new(reps_mean, reps_sem, coordinates, baseline_length, pos
                             ax.patch.set_alpha(alpha)  # Set transparency level
 
                         # Plot signals with error bars
-                        ax.errorbar(np.arange(12), reps_mean[stim_idx, :, neuron_idx],
+                        ax.errorbar(np.arange(baseline_length+post_stim_length+1), reps_mean[stim_idx, :, neuron_idx],
                                     yerr=reps_sem[stim_idx, :, neuron_idx], fmt='-o')
                         ax.set_xlabel('time [s]' if j == neurons_per_page - 1 else '')  # X-label only on the last row
                         ax.set_ylabel('dF/F0' if stim_idx == 0 else '')  # Y-label only on the first plot of the row
 
                         # Set x-ticks to be integers from -baseline_length to +post_stim_length
-                        ax.set_xticks(np.arange(12))  # Use original indices
+                        ax.set_xticks(np.arange(baseline_length+post_stim_length+1))  # Use original indices
                         ax.set_xticklabels(x_ticks)  # Set x-tick labels
 
                         # Add vertical dashed line for stimulus at baseline_length position

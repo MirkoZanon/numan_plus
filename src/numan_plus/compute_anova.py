@@ -164,7 +164,7 @@ def get_peristim(experiment, timepoints_to_use:list, stimulus_type:tuple, signal
     block_signal_reshaped = block_signal.reshape(number_of_peristim_cycle, number_per_peristim, signals.shape[1])
     return block_signal_reshaped
 
-def ANOVA_preprocess (experiment, stim_signal_exact, brain_region_tag, stim_volumes, signals):
+def ANOVA_preprocess (experiment, stim_signal_exact, stim_volumes, signals):
     """
     Crate following variables for ANOVA calculation:
     Hf: matrix of responses (cells X trials); Q: array of type of stimulus (trials,); C: array of type of control condition (trials,)
@@ -201,7 +201,7 @@ def ANOVA_preprocess (experiment, stim_signal_exact, brain_region_tag, stim_volu
     return Hf, C, Q
 
 
-def compute_anova_neurons(Q, C, Hf, alpha_level, n_permutations, filtered_idx):#, brain_region_tag, save_df):
+def compute_anova_neurons(Q, C, Hf, alpha_level, n_permutations, filtered_idx, n_numerosities):#, brain_region_tag, save_df):
     print('\nRunning permutation ANOVA on real dataset:')
 
     # Find numorosity selective units (anova_cells) using a two-way ANOVA with permutations (permute data and check F distribution for p-value)
@@ -211,7 +211,7 @@ def compute_anova_neurons(Q, C, Hf, alpha_level, n_permutations, filtered_idx):#
     #save_df['Total segmented'] = [Hf.shape[1]]
     #save_df['Anova selective'] = [R.shape[1]]
 
-    chance_lev = Hf.shape[1]*alpha_level/6
+    chance_lev = Hf.shape[1]*alpha_level/n_numerosities
     #save_df['chance n cells per group'] = [chance_lev]
     #print('Chance number of cells for group: '+str(chance_lev))
     print('Number of anova cells = %i (%0.2f%%)'%(len(anova_cells), 100*len(anova_cells)/Hf.shape[1]))
@@ -253,8 +253,7 @@ def compute_shuffled_anova_neurons(Q, C, Hf, alpha_level, n_permutations, show_p
 
     return anova_cells_shuffled, Q_S, C_S, R_S, pref_num_shuffled, excitatory_or_inhibitory_shuffled
 
-def run_multiple_shuffles(Q, C, Hf, alpha_level, n_permutations, n_reps=1000, show_inner_progress=False):
-    n_numerosities = 6  # Define the number of preferred numerosity levels
+def run_multiple_shuffles(Q, C, Hf, alpha_level, n_numerosities, n_permutations, n_reps=1000, show_inner_progress=False):
     n_neurons_shuffled_excitatory = np.zeros((n_numerosities, n_reps))
     n_neurons_shuffled_inhibitory = np.zeros((n_numerosities, n_reps))
     n_neurons_shuffled_total = np.zeros((n_numerosities, n_reps))
@@ -325,42 +324,27 @@ def save_anova_mask(spots, spot_tag, region_tag, vol_size, resolution):
                                 resolution=(1 / resolution[1], 1 / resolution[2]), imagej=True)
 
 
-def save_anova_spots(spots, anova_df, spot_tag):
-
+def save_anova_spots(n_numerosities, spots, anova_df, spot_tag):
     print('Saving spots with neurons info...')
 
     anova_cell = anova_df["anova_cells"].values
     pref_num = anova_df["pref_num"].values.astype(int)
-    #create anova group
+    
+    # Create anova group
     anova_groups = np.zeros(spots.num_spots)
     anova_groups[anova_cell] = 1
-    #create group numerosity 0
-    anova_num_0 = np.zeros(spots.num_spots)
-    anova_num_0[anova_cell[pref_num == 0]] = 1
-    #create group numerosity 1
-    anova_num_1 = np.zeros(spots.num_spots)
-    anova_num_1[anova_cell[pref_num == 1]] = 1
-    #create group numerosity 2
-    anova_num_2 = np.zeros(spots.num_spots)
-    anova_num_2[anova_cell[pref_num == 2]] = 1
-    #create group numerosity 3
-    anova_num_3 = np.zeros(spots.num_spots)
-    anova_num_3[anova_cell[pref_num == 3]] = 1
-    #create group numerosity 4
-    anova_num_4 = np.zeros(spots.num_spots)
-    anova_num_4[anova_cell[pref_num == 4]] = 1
-    #create group numerosity 5
-    anova_num_5 = np.zeros(spots.num_spots)
-    anova_num_5[anova_cell[pref_num == 5]] = 1
+    
+    # Dictionary to store all numerosity groups
+    anova_num_groups = {}
 
+    # Create groups for each numerosity dynamically based on n_numerosities
+    for num in range(n_numerosities):
+        anova_num_group = np.zeros(spots.num_spots)
+        anova_num_group[anova_cell[pref_num == num]] = 1
+        anova_num_groups[f"anova_num_{num}"] = anova_num_group
 
-    spots.add_groups({"anova_groups":anova_groups,
-                    "anova_num_0":anova_num_0,
-                    "anova_num_1":anova_num_1, 
-                    "anova_num_2":anova_num_2, 
-                    "anova_num_3":anova_num_3, 
-                    "anova_num_4":anova_num_4, 
-                    "anova_num_5":anova_num_5}, 
-                    rewrite=True)
+    # Add groups to spots
+    spots.add_groups({"anova_groups": anova_groups, **anova_num_groups}, rewrite=True)
 
+    # Save spots to JSON
     spots.to_json(f"./spots/signals/spots_{spot_tag}.json")
